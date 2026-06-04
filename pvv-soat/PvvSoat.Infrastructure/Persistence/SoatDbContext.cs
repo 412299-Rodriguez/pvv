@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PvvSoat.Domain.Entities;
 
 namespace PvvSoat.Infrastructure.Persistence;
 
@@ -12,8 +13,10 @@ public class SoatDbContext : DbContext
     {
     }
 
-    // TODO Sprint 1: add DbSet<Vehicle>, DbSet<Holder>, DbSet<Budget>, DbSet<Policy>
-    //                and their EF Core configurations.
+    public DbSet<Vehicle> Vehicles => Set<Vehicle>();
+    public DbSet<Holder> Holders => Set<Holder>();
+    public DbSet<Budget> Budgets => Set<Budget>();
+    public DbSet<Policy> Policies => Set<Policy>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
