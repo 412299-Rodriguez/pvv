@@ -1,0 +1,163 @@
+# PVV — Local development infrastructure
+# Brings up every backing service the 6 microservices depend on.
+# Usage: docker-compose up -d   (run from the /infra directory)
+
+services:
+  # ---------------------------------------------------------------------------
+  # SQL Server 2022 — relational store for pvv-soat and pvv-config
+  # ---------------------------------------------------------------------------
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: pvv-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "PvvLocal123!"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - pvv-network
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # One-shot init container: creates pvv_soat_db and pvv_config_db once SQL Server is healthy.
+  sqlserver-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: pvv-sqlserver-init
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      MSSQL_SA_PASSWORD: "PvvLocal123!"
+    volumes:
+      - ./scripts/sqlserver-init.sql:/init.sql:ro
+    networks:
+      - pvv-network
+    entrypoint:
+      - /bin/bash
+      - -c
+      - '/opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P "$$MSSQL_SA_PASSWORD" -C -i /init.sql'
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # MongoDB 7 — leads, event logs and Serilog sinks for pvv-bff / pvv-emission
+  # ---------------------------------------------------------------------------
+  mongodb:
+    image: mongo:7
+    container_name: pvv-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: "pvv_user"
+      MONGO_INITDB_ROOT_PASSWORD: "pvv_pass"
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - pvv-network
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand({ ping: 1 })' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # ---------------------------------------------------------------------------
+  # Redis 7 — config cache, sessions and ingress routes
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7
+    container_name: pvv-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - pvv-network
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Redis Commander — web UI for inspecting Redis
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: pvv-redis-commander
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_HOSTS: "local:redis:6379"
+    ports:
+      - "8081:8081"
+    networks:
+      - pvv-network
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # RabbitMQ 3 — messaging between pvv-bff (producer) and pvv-emission (consumer)
+  # ---------------------------------------------------------------------------
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: pvv-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: "pvv_user"
+      RABBITMQ_DEFAULT_PASS: "pvv_pass"
+      RABBITMQ_DEFAULT_VHOST: "pvv"
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - pvv-network
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # One-shot init container: declares pvv_emission_queue and pvv_emission_dlq
+  # on the pvv vhost via the RabbitMQ management HTTP API once it is healthy.
+  rabbitmq-init:
+    image: curlimages/curl:8.11.1
+    container_name: pvv-rabbitmq-init
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_HOST: "rabbitmq"
+      RABBITMQ_MGMT_PORT: "15672"
+      RABBITMQ_USER: "pvv_user"
+      RABBITMQ_PASS: "pvv_pass"
+      RABBITMQ_VHOST: "pvv"
+    volumes:
+      - ./scripts/rabbitmq-setup.sh:/rabbitmq-setup.sh:ro
+    networks:
+      - pvv-network
+    entrypoint: ["sh", "/rabbitmq-setup.sh"]
+    restart: "no"
+
+networks:
+  pvv-network:
+    name: pvv-network
+    driver: bridge
+
+volumes:
+  sqlserver_data:
+    name: pvv-sqlserver-data
+  mongodb_data:
+    name: pvv-mongodb-data
+  redis_data:
+    name: pvv-redis-data
+  rabbitmq_data:
+    name: pvv-rabbitmq-data

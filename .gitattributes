@@ -1,0 +1,10 @@
+# Normalize line endings: let Git decide for text files...
+* text=auto
+
+# ...but force LF for files that are consumed by Linux containers/shells,
+# so a Windows checkout does not break them inside Docker.
+*.sh   text eol=lf
+*.sql  text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+.env.example text eol=lf

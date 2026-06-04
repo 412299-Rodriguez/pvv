@@ -1,0 +1,165 @@
+# PVV — Contexto para Claude Code
+
+## Qué es este proyecto
+
+**Portal de Ventas Virtual de Seguros Vehiculares (PVV)** — Trabajo Final Integrador,
+Tecnicatura Universitaria en Programación, UTN FRC. Legajo 412299.
+
+Es un ecosistema de 6 microservicios que digitaliza la venta de seguros vehiculares
+en Argentina, soportando múltiples compañías aseguradoras desde una misma plataforma
+(multi-tenancy). El documento completo de arquitectura está en `docs/arquitectura-pvv.md`.
+
+---
+
+## Stack tecnológico
+
+| Capa | Tecnología |
+|---|---|
+| Backend | .NET 10 / ASP.NET Core 10 |
+| Frontend | React 19 + TypeScript 5 strict + Vite 6 + Tailwind CSS v4 |
+| Base de datos relacional | SQL Server 2022 (EF Core 9) |
+| Base de datos documental | MongoDB 7 (MongoDB.Driver 3) |
+| Caché | Redis 7 (StackExchange.Redis) |
+| Mensajería | RabbitMQ 3 |
+| Pagos | Mercado Pago SDK .NET + REST API |
+| State management (React) | Zustand |
+| CQRS | MediatR 12 |
+| Logging | Serilog 4 |
+| Testing .NET | xUnit + Moq |
+| Testing React | Vitest |
+
+---
+
+## Los 6 microservicios
+
+| Servicio | Tipo | Puerto | Descripción |
+|---|---|---|---|
+| pvv-soat | ASP.NET Core Web API | 5001 | Dominio central: vehículos, tomadores, presupuestos, pólizas |
+| pvv-config | ASP.NET Core Web API + Worker | 5002 | Configuración multi-tenant + sync SQL→Redis |
+| pvv-bff | ASP.NET Core Web API | 5003 | Gateway, sesiones, leads MongoDB, pagos MP, RabbitMQ |
+| pvv-emission | .NET Worker Service | 5004 | Consume RabbitMQ y emite pólizas en pvv-soat |
+| pvv-front | React 19 SPA | 5173 | Portal de compra — wizard 5 pasos |
+| pvv-admin | React 19 SPA | 5174 | Panel de administración + dashboard de analytics |
+
+---
+
+## Estructura del monorepo
+
+```
+/pvv
+  /pvv-soat/        → solución .NET (API, Application, Domain, Infrastructure)
+  /pvv-config/      → solución .NET (API, Application, Domain, Infrastructure, Worker)
+  /pvv-bff/         → solución .NET (API, Application, Domain, Infrastructure)
+  /pvv-emission/    → solución .NET (Worker, Application, Domain, Infrastructure)
+  /pvv-front/       → proyecto React 19 (FSD)
+  /pvv-admin/       → proyecto React 19 (FSD)
+  /infra/
+    docker-compose.yml
+    /scripts/
+  /docs/
+    arquitectura-pvv.md   ← leer antes de cualquier tarea
+    sprint0-checklist.md
+  .gitignore
+  README.md
+```
+
+---
+
+## Convenciones de código
+
+### .NET
+- Idioma del código: **inglés** (clases, métodos, variables, comentarios)
+- Idioma de mensajes de log y excepciones: **inglés**
+- Nomenclatura: PascalCase para clases/métodos, camelCase para variables locales
+- Un archivo por clase, nombre del archivo = nombre de la clase
+- Nunca lógica de negocio en controllers — solo llamadas a MediatR o services
+- Siempre usar `CancellationToken ct` en métodos async
+- Siempre usar `ILogger<T>` inyectado, nunca `Console.WriteLine`
+- Retornar siempre DTOs desde la capa Application, nunca entidades de dominio
+- Configuración siempre por `IOptions<T>`, nunca leer `IConfiguration` directamente en services
+
+### React / TypeScript
+- Idioma del código: **inglés**
+- Nomenclatura: PascalCase para componentes, camelCase para funciones/variables
+- Estructura Feature-Sliced Design (FSD): app / pages / widgets / features / entities / shared
+- Nunca lógica de negocio en componentes — extraer a custom hooks o stores Zustand
+- Siempre tipar explícitamente, nunca usar `any`
+- Axios instance centralizada en `shared/api`, nunca fetch directo en componentes
+- CSS solo con clases Tailwind, nunca estilos inline salvo valores dinámicos (CSS vars)
+
+---
+
+## Branching strategy
+
+- `main` → estable, solo merge desde `develop` via PR
+- `develop` → rama de integración
+- `feature/pvv-XXX-descripcion` → una rama por HU
+
+---
+
+## Infra local (Docker)
+
+| Servicio | Puerto | Credenciales |
+|---|---|---|
+| SQL Server 2022 | 1433 | sa / PvvLocal123! |
+| MongoDB 7 | 27017 | pvv_user / pvv_pass |
+| Redis 7 | 6379 | sin auth en local |
+| Redis Commander | 8081 | — |
+| RabbitMQ 3 | 5672 | pvv_user / pvv_pass |
+| RabbitMQ UI | 15672 | pvv_user / pvv_pass |
+
+RabbitMQ vhost: `pvv`
+Colas: `pvv_emission_queue` (worker principal), `pvv_emission_dlq` (dead letter)
+
+---
+
+## Sprint actual y estado
+
+### Sprint 0 — Setup e infraestructura (semana 1)
+**Objetivo:** Entorno 100% listo para escribir código de negocio desde el primer día del Sprint 1.
+
+#### HU-01 — Setup de repositorio e infraestructura base
+- [ ] Estructura de monorepo creada
+- [ ] docker-compose.yml con SQL Server, MongoDB, Redis, RabbitMQ
+- [ ] .env.example por cada microservicio
+- [ ] README.md con instrucciones de setup
+- [ ] .gitignore raíz
+
+#### HU-02 — Scaffolding de los 6 microservicios
+- [ ] pvv-soat: solución .NET, estructura de capas, Swagger, /health
+- [ ] pvv-config: solución .NET, Clean Architecture, MediatR, Swagger, /health
+- [ ] pvv-bff: solución .NET, Clean Architecture, MediatR, MongoDB, Redis, Swagger, /health
+- [ ] pvv-emission: solución .NET, BackgroundService base, /health
+- [ ] pvv-front: Vite + React 19 + TS strict + Tailwind v4 + FSD, levanta en 5173
+- [ ] pvv-admin: Vite + React 19 + TS strict + Tailwind v4 + FSD, levanta en 5174
+
+### Sprint 1 — Dominio: pvv-soat + pvv-config (semanas 2-3)
+**Pendiente**
+
+### Sprint 2 — Orquestación: pvv-bff + pvv-emission + pvv-front (semanas 4-5)
+**Pendiente**
+
+### Sprint 3 — Admin + Analytics + Testing (semanas 6-7)
+**Pendiente**
+
+---
+
+## Lo que está fuera de alcance (no implementar)
+
+- Validación de identidad OTP (SMS / email)
+- Trust score y detección de fraude en tiempo real
+- Consulta a registros oficiales de vehículos (RUNT / RNPA)
+- Venta cruzada (cross-sell) de seguros adicionales
+- SignalR / WebSockets
+- HMAC validation en BFF
+- Múltiples workers de emisión (solo uno: EmissionWorker)
+
+---
+
+## Cómo usar este archivo
+
+Al iniciar una sesión de Claude Code, pasá siempre estos dos archivos:
+1. `docs/CONTEXT.md` (este archivo) — estado del proyecto y convenciones
+2. `docs/arquitectura-pvv.md` — arquitectura técnica detallada
+
+Luego pegá el prompt de la tarea que corresponde al sprint y HU actual.
