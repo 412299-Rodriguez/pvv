@@ -147,6 +147,62 @@ Colas: `pvv_emission_queue` (worker principal), `pvv_emission_dlq` (dead letter)
 
 ---
 
+## Notas técnicas resueltas (leer antes de tocar APIs / Redis)
+
+Estas son trampas reales que aparecieron en el Sprint 1 con el stack .NET 10. Tenerlas
+presentes para no perder tiempo en el Sprint 2.
+
+### Swagger / Swashbuckle 10.x + Microsoft.OpenApi 2.x
+- Swashbuckle.AspNetCore 10.x arrastra **Microsoft.OpenApi 2.x**, que **aplanó el namespace**:
+  los tipos ya **no** están en `Microsoft.OpenApi.Models` sino directamente en **`Microsoft.OpenApi`**
+  (`OpenApiSecurityScheme`, `SecuritySchemeType`, `ParameterLocation`, etc.).
+- Para referenciar un security scheme en un requirement **ya no se usa** `new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }`.
+  Se usa **`OpenApiSecuritySchemeReference("Bearer", document, null)`**.
+- **`AddSecurityRequirement` ahora recibe un `Func<OpenApiDocument, OpenApiSecurityRequirement>`** (lambda), no un objeto directo.
+- El valor del `OpenApiSecurityRequirement` es `List<string>` (usar `new List<string>()`, no `Array.Empty<string>()`).
+
+Snippet que compila (config Bearer en `AddSwaggerGen`):
+```csharp
+using Microsoft.OpenApi;
+
+options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+{
+    Name = "Authorization",
+    Type = SecuritySchemeType.Http,
+    Scheme = "bearer",
+    BearerFormat = "JWT",
+    In = ParameterLocation.Header
+});
+options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+{
+    { new OpenApiSecuritySchemeReference("Bearer", document, null), new List<string>() }
+});
+```
+
+### Redis Pub/Sub con StackExchange.Redis (suscripción)
+- La sobrecarga `ISubscriber.SubscribeAsync(channel, Action<RedisChannel, RedisValue>)` **fue removida**.
+  Usar el patrón **`ChannelMessageQueue` + `OnMessage`**:
+```csharp
+var queue = await subscriber.SubscribeAsync(RedisChannel.Literal("pvv:cache:invalidate"));
+queue.OnMessage(channelMessage => HandleAsync(channelMessage.Message, ct));
+```
+- Al deserializar el `RedisValue` con `System.Text.Json`, **convertir a string explícito** (`message.ToString()`):
+  pasar el `RedisValue` directo es **ambiguo** entre las sobrecargas `string` y `ReadOnlySpan<byte>`.
+- Los payloads se publican en camelCase, así que el deserializer necesita `PropertyNameCaseInsensitive = true`.
+
+### Otras decisiones del Sprint 1 (válidas para todos los servicios)
+- **EF Core 10** (no 9): empareja con el SDK .NET 10 y `dotnet-ef` 10.0.8.
+- **Interfaces de repositorio en la capa Application** (no Infrastructure): con el grafo
+  `Application → Domain` y `Infrastructure → Application`, los handlers no pueden ver Infrastructure.
+- **`JsonStringEnumConverter`** en `AddControllers().AddJsonOptions(...)` para que los enums
+  (ej. `VehicleType`) deserialicen desde string en el body.
+- Para exponer XML comments en Swagger: `<GenerateDocumentationFile>true</GenerateDocumentationFile>`
+  + `<NoWarn>$(NoWarn);1591</NoWarn>` en el `.csproj` del API, e `IncludeXmlComments(...)` en SwaggerGen.
+- En los Workers que además exponen `/health` (ej. pvv-emission), usar el **SDK Web** (minimal API)
+  hospedando el `BackgroundService` como hosted service.
+
+---
+
 ## Lo que está fuera de alcance (no implementar)
 
 - Validación de identidad OTP (SMS / email)

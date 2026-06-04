@@ -630,3 +630,72 @@ pvv-front polling → ingress(EMISSION_STATUS) → pvv-bff → MongoDB
         ↓ status = success
 Usuario ve póliza emitida ✅
 ```
+
+---
+
+## 10. Apéndice técnico — Compatibilidad de librerías (.NET 10)
+
+Notas de implementación que surgieron al construir pvv-soat y pvv-config (Sprint 1) y que
+aplican a los servicios .NET del Sprint 2 (pvv-bff, pvv-emission).
+
+### 10.1 Swagger: Swashbuckle 10.x + Microsoft.OpenApi 2.x
+
+Swashbuckle.AspNetCore 10.x depende de **Microsoft.OpenApi 2.x**, con cambios de breaking API:
+
+| Antes (OpenApi 1.x) | Ahora (OpenApi 2.x) |
+|---|---|
+| `using Microsoft.OpenApi.Models;` | `using Microsoft.OpenApi;` (namespace aplanado) |
+| `new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }` | `new OpenApiSecuritySchemeReference("Bearer", document, null)` |
+| `AddSecurityRequirement(new OpenApiSecurityRequirement { ... })` | `AddSecurityRequirement(document => new OpenApiSecurityRequirement { ... })` (espera un `Func<OpenApiDocument, OpenApiSecurityRequirement>`) |
+| valor del requirement `Array.Empty<string>()` | `new List<string>()` (el value es `List<string>`) |
+
+```csharp
+using Microsoft.OpenApi;
+
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header
+    });
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        { new OpenApiSecuritySchemeReference("Bearer", document, null), new List<string>() }
+    });
+});
+```
+
+### 10.2 Redis Pub/Sub con StackExchange.Redis
+
+La suscripción con callback `Action<RedisChannel, RedisValue>` **ya no existe**. Patrón vigente
+(`ChannelMessageQueue` + `OnMessage`), tal como lo usa el `CacheSyncWorker` de pvv-config:
+
+```csharp
+var subscriber = redis.GetSubscriber();
+var queue = await subscriber.SubscribeAsync(RedisChannel.Literal("pvv:cache:invalidate"));
+queue.OnMessage(channelMessage => HandleAsync(channelMessage.Message, ct));
+```
+
+- Para deserializar el mensaje con `System.Text.Json`, **convertir el `RedisValue` a `string`** primero
+  (`message.ToString()`); pasarlo directo es ambiguo entre las sobrecargas `string` y `ReadOnlySpan<byte>`.
+- El publisher escribe el payload en **camelCase**, así que el lector necesita
+  `JsonSerializerOptions { PropertyNameCaseInsensitive = true }`.
+- Canal de invalidación de caché: `pvv:cache:invalidate`. Keys de config en Redis:
+  `pvv:config:{hashedCompanyId}:{configurationType}` (TTL 15 min).
+
+### 10.3 Convenciones de implementación confirmadas
+
+- **EF Core 10** (no 9) — empareja con el SDK .NET 10 y la tool `dotnet-ef` 10.0.8.
+- **Interfaces de repositorio / servicios en la capa Application**, implementaciones en Infrastructure
+  (el grafo de referencias `Application → Domain`, `Infrastructure → Application` impide lo contrario).
+- **`JsonStringEnumConverter`** registrado en `AddControllers().AddJsonOptions(...)` para enums en el body.
+- **`IUnitOfWork`** (abstracción en Application) para `SaveChangesAsync` + `ExecuteInTransactionAsync`,
+  evitando que los handlers dependan de EF Core directamente.
+- **JWT**: el `JwtService` (pvv-config) firma HS256 con claims `sub`, `companyId`, `username` (exp 8h).
+  El BFF validará esos mismos tokens (mismo `Secret`/`Issuer`).
+- **`HashedCompanyId`**: AES-256-CBC (IV aleatorio prependido, base64 URL-safe). El BFF lo recibe del
+  frontend y lo usa para leer config vía `GET /api/configurations/internal/{hashedCompanyId}/{type}`.
