@@ -1,13 +1,17 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PvvConfig.Application.Interfaces;
 using PvvConfig.Infrastructure.Persistence;
+using PvvConfig.Infrastructure.Repositories;
+using PvvConfig.Infrastructure.Services;
 using StackExchange.Redis;
 
 namespace PvvConfig.Infrastructure;
 
 /// <summary>
-/// Infrastructure-layer service registration (EF Core SQL Server + Redis).
+/// Infrastructure-layer service registration (EF Core, Redis, repositories,
+/// services and unit of work).
 /// </summary>
 public static class DependencyInjection
 {
@@ -27,8 +31,17 @@ public static class DependencyInjection
                 _ => ConnectionMultiplexer.Connect(redisConnectionString));
         }
 
-        // TODO Sprint 1: register repositories, ICacheInvalidator (Redis Pub/Sub),
-        //                and the cache sync services.
+        // Repositories + unit of work.
+        services.AddScoped<ICompanyRepository, CompanyRepository>();
+        services.AddScoped<IOperatorRepository, OperatorRepository>();
+        services.AddScoped<IConfigurationRepository, ConfigurationRepository>();
+        services.AddScoped<IUnitOfWork, ConfigUnitOfWork>();
+
+        // Stateless services.
+        services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
+        services.AddSingleton<IJwtService, JwtService>();
+        services.AddSingleton<IEncryptionService, AesEncryptionService>();
+        services.AddSingleton<IConfigCache, RedisConfigCache>();
 
         return services;
     }

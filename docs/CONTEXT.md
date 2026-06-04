@@ -115,29 +115,32 @@ Colas: `pvv_emission_queue` (worker principal), `pvv_emission_dlq` (dead letter)
 
 ## Sprint actual y estado
 
-### Sprint 0 — Setup e infraestructura (semana 1)
+> **Sprint actual: Sprint 2** (Sprint 0 y Sprint 1 completados).
+
+### Sprint 0 — Setup e infraestructura (semana 1) ✅ COMPLETADO
 **Objetivo:** Entorno 100% listo para escribir código de negocio desde el primer día del Sprint 1.
 
 #### HU-01 — Setup de repositorio e infraestructura base
-- [ ] Estructura de monorepo creada
-- [ ] docker-compose.yml con SQL Server, MongoDB, Redis, RabbitMQ
-- [ ] .env.example por cada microservicio
-- [ ] README.md con instrucciones de setup
-- [ ] .gitignore raíz
+- [x] Estructura de monorepo creada
+- [x] docker-compose.yml con SQL Server, MongoDB, Redis, RabbitMQ
+- [x] .env.example por cada microservicio
+- [x] README.md con instrucciones de setup
+- [x] .gitignore raíz
 
 #### HU-02 — Scaffolding de los 6 microservicios
-- [ ] pvv-soat: solución .NET, estructura de capas, Swagger, /health
-- [ ] pvv-config: solución .NET, Clean Architecture, MediatR, Swagger, /health
-- [ ] pvv-bff: solución .NET, Clean Architecture, MediatR, MongoDB, Redis, Swagger, /health
-- [ ] pvv-emission: solución .NET, BackgroundService base, /health
-- [ ] pvv-front: Vite + React 19 + TS strict + Tailwind v4 + FSD, levanta en 5173
-- [ ] pvv-admin: Vite + React 19 + TS strict + Tailwind v4 + FSD, levanta en 5174
+- [x] pvv-soat: solución .NET, estructura de capas, Swagger, /health
+- [x] pvv-config: solución .NET, Clean Architecture, MediatR, Swagger, /health
+- [x] pvv-bff: solución .NET, Clean Architecture, MediatR, MongoDB, Redis, Swagger, /health
+- [x] pvv-emission: solución .NET, BackgroundService base, /health
+- [x] pvv-front: Vite + React 19 + TS strict + Tailwind v4 + FSD, levanta en 5173
+- [x] pvv-admin: Vite + React 19 + TS strict + Tailwind v4 + FSD, levanta en 5174
 
-### Sprint 1 — Dominio: pvv-soat + pvv-config (semanas 2-3)
-**Pendiente**
+### Sprint 1 — Dominio: pvv-soat + pvv-config (semanas 2-3) ✅ COMPLETADO
+- [x] pvv-soat: entidades (Vehicle, Holder, Budget, Policy), EF Core, migración real, CQRS (vehículos/tomadores/presupuestos/pólizas), repositorios, controllers + ProblemDetails, BudgetExpirationJob, seeder
+- [x] pvv-config: modelo EAV (Company, Configuration, ConfigurationHistory, Operator), migración real, Auth JWT + BCrypt, cifrado AES-256, CQRS (companies/configurations), endpoints + CompanyOwnershipFilter, CacheSyncWorker con Redis Pub/Sub, seeder
 
 ### Sprint 2 — Orquestación: pvv-bff + pvv-emission + pvv-front (semanas 4-5)
-**Pendiente**
+**Pendiente — sprint actual**
 
 ### Sprint 3 — Admin + Analytics + Testing (semanas 6-7)
 **Pendiente**

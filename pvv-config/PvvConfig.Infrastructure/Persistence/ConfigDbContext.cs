@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PvvConfig.Domain.Entities;
 
 namespace PvvConfig.Infrastructure.Persistence;
 
@@ -12,9 +13,10 @@ public class ConfigDbContext : DbContext
     {
     }
 
-    // TODO Sprint 1: add DbSet<Company>, DbSet<Product>, DbSet<Pricing>,
-    //                DbSet<AppearanceConfig>, DbSet<ConfigurationHistory>
-    //                and their EF Core configurations.
+    public DbSet<Company> Companies => Set<Company>();
+    public DbSet<Configuration> Configurations => Set<Configuration>();
+    public DbSet<ConfigurationHistory> ConfigurationHistories => Set<ConfigurationHistory>();
+    public DbSet<Operator> Operators => Set<Operator>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
