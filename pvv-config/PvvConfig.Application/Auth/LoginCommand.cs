@@ -21,6 +21,6 @@ public class LoginHandler(
         }
 
         var (token, expiresAt) = jwtService.GenerateToken(op);
-        return new LoginResponseDto(token, expiresAt, op.CompanyId);
+        return new LoginResponseDto(token, expiresAt, op.CompanyId, op.Role.ToString());
     }
 }

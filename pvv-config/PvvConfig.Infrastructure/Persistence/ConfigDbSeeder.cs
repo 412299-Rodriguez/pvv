@@ -5,6 +5,7 @@ using PvvConfig.Application.DTOs.ConfigurationValues;
 using PvvConfig.Application.Interfaces;
 using PvvConfig.Domain.Constants;
 using PvvConfig.Domain.Entities;
+using PvvConfig.Domain.Enums;
 
 namespace PvvConfig.Infrastructure.Persistence;
 
@@ -50,6 +51,19 @@ public static class ConfigDbSeeder
             CompanyId = companyId,
             Username = "admin@demo.com",
             PasswordHash = passwordHasher.Hash("Demo123!"),
+            Role = OperatorRole.CompanyOperator,
+            IsActive = true,
+            CreatedAt = now
+        };
+
+        // System administrator: manages every company (has no company of its own).
+        var systemAdmin = new Operator
+        {
+            OperatorId = Guid.NewGuid(),
+            CompanyId = null,
+            Username = "superadmin@pvv.com",
+            PasswordHash = passwordHasher.Hash("Super123!"),
+            Role = OperatorRole.SystemAdmin,
             IsActive = true,
             CreatedAt = now
         };
@@ -184,6 +198,7 @@ public static class ConfigDbSeeder
 
         context.Companies.Add(company);
         context.Operators.Add(op);
+        context.Operators.Add(systemAdmin);
         context.Configurations.AddRange(
             BuildConfiguration(companyId, ConfigurationTypes.PVV_UI_CONFIG, uiConfig, now),
             BuildConfiguration(companyId, ConfigurationTypes.PRODUCT_CONFIG, productConfig, now),

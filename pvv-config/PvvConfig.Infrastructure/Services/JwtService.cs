@@ -18,12 +18,18 @@ public class JwtService(IOptions<JwtSettings> options) : IJwtService
     {
         var expiresAt = DateTime.UtcNow.Add(TokenLifetime);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, op.OperatorId.ToString()),
-            new Claim("companyId", op.CompanyId.ToString()),
-            new Claim("username", op.Username)
+            new(JwtRegisteredClaimNames.Sub, op.OperatorId.ToString()),
+            new(ClaimTypes.Role, op.Role.ToString()),
+            new("username", op.Username),
         };
+
+        // SystemAdmins have no company; only company operators carry a companyId.
+        if (op.CompanyId.HasValue)
+        {
+            claims.Add(new Claim("companyId", op.CompanyId.Value.ToString()));
+        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using PvvConfig.Application.Companies.Commands;
 using PvvConfig.Application.Companies.Queries;
 using PvvConfig.Application.DTOs;
+using PvvConfig.Domain.Enums;
 
 namespace PvvConfig.API.Controllers;
 
@@ -15,6 +16,7 @@ public class CompaniesController(IMediator mediator) : ControllerBase
     /// <summary>Lists all companies.</summary>
     /// <response code="200">The list of companies.</response>
     [HttpGet]
+    [Authorize(Roles = nameof(OperatorRole.SystemAdmin))]
     [ProducesResponseType(typeof(List<CompanyDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
@@ -40,6 +42,7 @@ public class CompaniesController(IMediator mediator) : ControllerBase
     /// <response code="201">The company was created.</response>
     /// <response code="409">A company with the same CUIT already exists.</response>
     [HttpPost]
+    [Authorize(Roles = nameof(OperatorRole.SystemAdmin))]
     [ProducesResponseType(typeof(CompanyDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Create([FromBody] CreateCompanyCommand command, CancellationToken ct)
@@ -52,6 +55,7 @@ public class CompaniesController(IMediator mediator) : ControllerBase
     /// <response code="200">The company was updated.</response>
     /// <response code="404">No company exists with that id.</response>
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = nameof(OperatorRole.SystemAdmin))]
     [ProducesResponseType(typeof(CompanyDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCompanyRequest request, CancellationToken ct)
