@@ -12,7 +12,8 @@
 
 /* license-plate styled input */
 .plate {
-  background-color: var(--color-plate-navy);
+  /* Uses the company's primary color (text stays white for contrast). */
+  background-color: var(--color-primary);
   border-radius: var(--radius-md);
   padding: clamp(16px, 4vw, 24px) clamp(12px, 4vw, 28px);
   text-align: center;

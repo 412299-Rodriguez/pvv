@@ -56,12 +56,13 @@
   align-items: center;
   gap: 14px;
   background-color: var(--color-surface-violet);
-  border-left: 3px solid var(--color-primary);
+  /* Accent in the company's secondary color. */
+  border-left: 3px solid var(--color-secondary);
   border-radius: var(--radius-sm);
   padding: 15px 18px;
 }
 .featureIcon {
-  color: var(--color-primary);
+  color: var(--color-secondary);
   flex-shrink: 0;
   display: grid;
   place-items: center;
