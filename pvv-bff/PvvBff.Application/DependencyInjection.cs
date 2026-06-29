@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using PvvBff.Application.Ingress;
+using PvvBff.Application.Payments;
 
 namespace PvvBff.Application;
 
@@ -19,6 +20,7 @@ public static class DependencyInjection
         // Internal ingress handlers (internal://{key}) — resolved by key in a
         // DI-built registry. Add one line per new concern; no central switch.
         services.AddScoped<IInternalIngressHandler, CompanyConfigHandler>();
+        services.AddScoped<IInternalIngressHandler, PaymentInitHandler>();
 
         return services;
     }
