@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useSessionStore, selectCanSubmitPlate } from '@/entities/session';
 import { checkPlate, IngressError } from '@/shared/api/ingress';
 import { Card, Button, Checkbox, CheckIcon, LockIcon } from '@/shared/ui';
-import { normalizePlate, isPlateValid, useInfoModalStore } from '@/shared/lib';
+import { normalizePlate, isPlateValid, useInfoModalStore, useAlertModalStore } from '@/shared/lib';
 import { useText } from '@/entities/company';
 import styles from './PlateForm.module.css';
 
@@ -20,7 +20,6 @@ export function PlateForm() {
   const canSubmit = useSessionStore(selectCanSubmitPlate);
 
   const [checking, setChecking] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const plateOk = isPlateValid(plate);
 
   const plateTitle = useText('plateTitle', 'Ingresá la patente');
@@ -28,6 +27,7 @@ export function PlateForm() {
   const plateCta = useText('plateCta', 'Cotizar mi seguro');
   const secureNote = useText('secureNote', 'Tus datos están protegidos');
   const openModal = useInfoModalStore((s) => s.openModal);
+  const showAlert = useAlertModalStore((s) => s.showAlert);
 
   // Normalize and cap at 7 alphanumeric characters (Mercosur plate max).
   const handlePlateChange = (raw: string) => {
@@ -38,16 +38,21 @@ export function PlateForm() {
   // Run the (mock) backend plate lookup, then let the store decide what's next.
   const handleSubmit = async () => {
     setChecking(true);
-    setError(null);
     try {
       const result = await checkPlate({ plate });
       applyPlateCheck(result);
     } catch (e) {
-      setError(
-        e instanceof IngressError
-          ? e.message
-          : 'No pudimos validar la patente. Intentá de nuevo.',
-      );
+      if (e instanceof IngressError && e.statusCode === 404) {
+        showAlert(
+          'No encontramos ese vehículo',
+          'Verificá que la patente esté bien escrita e intentá de nuevo.',
+        );
+      } else {
+        showAlert(
+          'No pudimos validar la patente',
+          'Ocurrió un problema. Intentá de nuevo en unos segundos.',
+        );
+      }
     } finally {
       setChecking(false);
     }
@@ -112,8 +117,6 @@ export function PlateForm() {
       >
         {checking ? 'Cotizando…' : `${plateCta} →`}
       </Button>
-
-      {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.secureNote}>
         <LockIcon />

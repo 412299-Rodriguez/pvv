@@ -7,6 +7,7 @@ import { Stepper } from '@/widgets/stepper';
 import { PurchaseSummary } from '@/widgets/purchase-summary';
 import { AdCarousel } from '@/widgets/ad-carousel';
 import { InfoModals } from '@/widgets/info-modals';
+import { AlertModal } from '@/widgets/alert-modal';
 
 import { PlateForm } from '@/features/quote-plate';
 import { DocumentForm } from '@/features/identify-document';
@@ -95,6 +96,7 @@ export function WizardPage() {
 
       <RenewPolicyModal />
       <InfoModals />
+      <AlertModal />
     </>
   );
 }

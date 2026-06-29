@@ -4,6 +4,7 @@ import { useSessionStore, selectSelectedCoverage } from '@/entities/session';
 import { vehicleTitle } from '@/entities/vehicle';
 import { policyholderFullName } from '@/entities/policyholder';
 import { createBudget, startPayment } from '@/shared/api/ingress';
+import { useAlertModalStore } from '@/shared/lib';
 import { Button, MercadoPagoMark } from '@/shared/ui';
 import styles from './PaymentSection.module.css';
 
@@ -20,12 +21,11 @@ export function PaymentSection() {
   const coverage = useSessionStore(selectSelectedCoverage);
 
   const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const showAlert = useAlertModalStore((s) => s.showAlert);
 
   const handlePay = async () => {
     if (!coverage || !vehicle) return;
     setProcessing(true);
-    setError(null);
     try {
       const { budgetId, amount } = await createBudget({
         plate,
@@ -47,7 +47,7 @@ export function PaymentSection() {
       window.location.href = initPoint;
     } catch {
       setProcessing(false);
-      setError('No pudimos iniciar el pago. Intentá de nuevo.');
+      showAlert('No pudimos iniciar el pago', 'Ocurrió un problema. Intentá de nuevo en unos segundos.');
     }
   };
 
@@ -87,8 +87,6 @@ export function PaymentSection() {
           </svg>
         </div>
       </div>
-
-      {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.payBar}>
         <Button variant="mercadoPago" fullWidth disabled={processing} onClick={handlePay}>
