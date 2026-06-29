@@ -25,33 +25,35 @@ export function IntroPanel() {
   ];
 
   return (
-    <Card>
-      {(logoUrl || companyName) && (
-        <div className={styles.brand}>
-          {logoUrl && <img src={logoUrl} alt={companyName} className={styles.brandLogo} />}
-          {companyName && <span className={styles.brandName}>{companyName}</span>}
-        </div>
-      )}
-
-      <h1 className={styles.title}>{introTitle}</h1>
-      <p className={styles.subtitle}>{introSubtitle}</p>
-
-      <div className={styles.features}>
-        {features.map(({ icon: Icon, title, description }) => (
-          <div key={title} className={styles.feature}>
-            <span className={styles.featureIcon}>
-              <Icon />
-            </span>
-            <div className={styles.featureText}>
-              <b>{title}</b>
-              <span>{description}</span>
-            </div>
+    <Card className={styles.card}>
+      <div className={styles.inner}>
+        {(logoUrl || companyName) && (
+          <div className={styles.brand}>
+            {logoUrl && <img src={logoUrl} alt={companyName} className={styles.brandLogo} />}
+            {companyName && <span className={styles.brandName}>{companyName}</span>}
           </div>
-        ))}
-      </div>
+        )}
 
-      <div className={styles.trust}>
-        <span className={styles.stars}>★★★★★</span> {ratingText}
+        <h1 className={styles.title}>{introTitle}</h1>
+        <p className={styles.subtitle}>{introSubtitle}</p>
+
+        <div className={styles.features}>
+          {features.map(({ icon: Icon, title, description }) => (
+            <div key={title} className={styles.feature}>
+              <span className={styles.featureIcon}>
+                <Icon />
+              </span>
+              <div className={styles.featureText}>
+                <b>{title}</b>
+                <span>{description}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className={styles.trust}>
+          <span className={styles.stars}>★★★★★</span> {ratingText}
+        </div>
       </div>
     </Card>
   );

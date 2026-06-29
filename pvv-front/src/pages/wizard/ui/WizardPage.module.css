@@ -42,13 +42,15 @@
   order: 1; /* mobile: plate + ads first */
 }
 .introCol {
+  display: flex;
+  flex-direction: column;
   order: 2; /* mobile: intro below */
 }
 @media (min-width: 820px) {
   .step1 {
     grid-template-columns: 40fr 60fr;
     column-gap: 32px;
-    align-items: start;
+    /* default align-items: stretch → intro card matches the right column height */
   }
   .introCol,
   .rightCol {
