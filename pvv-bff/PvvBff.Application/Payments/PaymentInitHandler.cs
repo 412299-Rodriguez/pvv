@@ -44,6 +44,9 @@ public sealed class PaymentInitHandler : IInternalIngressHandler
                 PreferenceId = preference.PreferenceId,
                 Status = PaymentStatus.Pending,
                 CreatedAt = DateTime.UtcNow,
+                // Denormalized so the result page can show the ticket after the redirect.
+                VehicleTitle = ReadOptionalString(context.Body, "vehicleTitle"),
+                HolderName = ReadOptionalString(context.Body, "holderName"),
             },
             ct);
 
@@ -72,4 +75,10 @@ public sealed class PaymentInitHandler : IInternalIngressHandler
 
         return !string.IsNullOrWhiteSpace(budgetId) && amount > 0m;
     }
+
+    private static string? ReadOptionalString(JsonElement? body, string key) =>
+        body is { ValueKind: JsonValueKind.Object } obj &&
+        obj.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
 }

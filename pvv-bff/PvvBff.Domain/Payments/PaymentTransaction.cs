@@ -30,4 +30,19 @@ public sealed class PaymentTransaction
     public DateTime CreatedAt { get; set; }
 
     public DateTime? ConfirmedAt { get; set; }
+
+    // ---- Denormalized ticket fields (set at PAYMENT_INIT so the result page can
+    // render the ticket after the redirect, without re-fetching from soat) -------
+    public string? VehicleTitle { get; set; }
+
+    public string? HolderName { get; set; }
+
+    // ---- Emission outcome (written by pvv-emission's worker) --------------------
+    public string? EmissionStatus { get; set; }
+
+    public string? PolicyNumber { get; set; }
+
+    public int? EmissionAttempts { get; set; }
+
+    public DateTime? EmissionUpdatedAt { get; set; }
 }

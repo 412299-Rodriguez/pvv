@@ -24,9 +24,16 @@
     {
       "hash": "BUDGET_CALC",
       "method": "POST",
-      "endpoint": "http://localhost:5001/api/budgets",
+      "endpoint": "internal://budget-calc",
       "timeoutSeconds": 20,
-      "targetService": "pvv-soat"
+      "targetService": "pvv-bff"
+    },
+    {
+      "hash": "EMISSION_STATUS",
+      "method": "POST",
+      "endpoint": "internal://emission-status",
+      "timeoutSeconds": 10,
+      "targetService": "pvv-bff"
     },
     {
       "hash": "POLICY_STATUS",

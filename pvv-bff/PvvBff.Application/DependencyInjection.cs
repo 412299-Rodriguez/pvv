@@ -23,6 +23,8 @@ public static class DependencyInjection
         services.AddScoped<IInternalIngressHandler, PaymentInitHandler>();
         services.AddScoped<IInternalIngressHandler, PlateSearchHandler>();
         services.AddScoped<IInternalIngressHandler, QuoteHandler>();
+        services.AddScoped<IInternalIngressHandler, BudgetCalcHandler>();
+        services.AddScoped<IInternalIngressHandler, EmissionStatusHandler>();
 
         return services;
     }
