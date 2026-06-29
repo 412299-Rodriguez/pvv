@@ -9,7 +9,7 @@ export function InvalidPortal() {
     <div className={styles.screen}>
       <div className={styles.card}>
         <div className={styles.emoji} aria-hidden>
-          🧭
+          🙁
         </div>
         <h1 className={styles.title}>Este no es un portal válido</h1>
         <p className={styles.text}>
