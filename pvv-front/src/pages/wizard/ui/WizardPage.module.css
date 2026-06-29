@@ -1,23 +1,3 @@
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 24px;
-  background-color: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-}
-.brandLogo {
-  height: 36px;
-  width: auto;
-  object-fit: contain;
-}
-.brandName {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--color-text);
-  letter-spacing: -0.01em;
-}
-
 .stage {
   max-width: 1040px;
   width: 100%;
@@ -47,34 +27,32 @@
   }
 }
 
-/* ---- Step 1: intro | plate, ads below ----------------------------------- */
-/* Mobile: plate, then ads, then intro. Desktop: intro | plate row, ads below. */
+/* ---- Step 1: intro (left) | plate + ads (right column) ------------------ */
 .step1 {
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-areas:
-    'plate'
-    'ads'
-    'intro';
   gap: 24px;
   width: 100%;
 }
-.introArea {
-  grid-area: intro;
+/* The plate form and the ad carousel stack in the right column. */
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  order: 1; /* mobile: plate + ads first */
 }
-.plateArea {
-  grid-area: plate;
-}
-.adsArea {
-  grid-area: ads;
+.introCol {
+  order: 2; /* mobile: intro below */
 }
 @media (min-width: 820px) {
   .step1 {
     grid-template-columns: 40fr 60fr;
-    grid-template-areas:
-      'intro plate'
-      'ads ads';
     column-gap: 32px;
+    align-items: start;
+  }
+  .introCol,
+  .rightCol {
+    order: 0;
   }
 }
 

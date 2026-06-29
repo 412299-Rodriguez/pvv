@@ -28,21 +28,12 @@ export function WizardPage() {
   const hasCoverage = useSessionStore((s) => s.selectedCoverageId !== null);
   const goBack = useSessionStore((s) => s.goBack);
 
-  const logoUrl = usePvvConfigStore((s) => s.logoUrl);
-  const companyName = usePvvConfigStore((s) => s.companyName);
   const adImages = usePvvConfigStore((s) => s.adImages);
 
   const showTopBack = step === 'checkout';
 
   return (
     <>
-      {(logoUrl || companyName) && (
-        <header className={styles.brand}>
-          {logoUrl && <img src={logoUrl} alt={companyName} className={styles.brandLogo} />}
-          {companyName && <span className={styles.brandName}>{companyName}</span>}
-        </header>
-      )}
-
       <Stepper />
 
       <main className={styles.stage}>
@@ -57,17 +48,13 @@ export function WizardPage() {
         <div key={step} className={styles.panel}>
           {step === 'plate' && (
             <div className={styles.step1}>
-              <div className={styles.introArea}>
+              <div className={styles.introCol}>
                 <IntroPanel />
               </div>
-              <div className={styles.plateArea}>
+              <div className={styles.rightCol}>
                 <PlateForm />
+                {adImages.length > 0 && <AdCarousel images={adImages} />}
               </div>
-              {adImages.length > 0 && (
-                <div className={styles.adsArea}>
-                  <AdCarousel images={adImages} />
-                </div>
-              )}
             </div>
           )}
 

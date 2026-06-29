@@ -1,9 +1,12 @@
 import { Card, BoltIcon, MobileIcon, LockIcon } from '@/shared/ui';
-import { useText } from '@/entities/company';
+import { useText, usePvvConfigStore } from '@/entities/company';
 import styles from './IntroPanel.module.css';
 
 /** Marketing / value-proposition panel shown beside the plate form on step 1. */
 export function IntroPanel() {
+  const logoUrl = usePvvConfigStore((s) => s.logoUrl);
+  const companyName = usePvvConfigStore((s) => s.companyName);
+
   const introTitle = useText('introTitle', 'Cotizá tu seguro en minutos');
   const introSubtitle = useText('introSubtitle', '100% digital, sin papeles, sin filas.');
   const ratingText = useText('ratingText', 'Miles de pólizas emitidas');
@@ -23,6 +26,13 @@ export function IntroPanel() {
 
   return (
     <Card>
+      {(logoUrl || companyName) && (
+        <div className={styles.brand}>
+          {logoUrl && <img src={logoUrl} alt={companyName} className={styles.brandLogo} />}
+          {companyName && <span className={styles.brandName}>{companyName}</span>}
+        </div>
+      )}
+
       <h1 className={styles.title}>{introTitle}</h1>
       <p className={styles.subtitle}>{introSubtitle}</p>
 
