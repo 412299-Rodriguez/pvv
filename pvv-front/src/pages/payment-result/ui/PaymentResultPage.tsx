@@ -51,9 +51,16 @@ export function PaymentResultPage() {
         }
 
         if (status.emissionStatus === 'success') {
-          const from = new Date(status.emissionUpdatedAt ?? new Date().toISOString());
-          const until = new Date(from);
-          until.setFullYear(until.getFullYear() + 1);
+          // Prefer soat's real coverage window (future-dated on renewals);
+          // fall back to a computed year if it isn't available yet.
+          const from = new Date(status.validFrom ?? status.emissionUpdatedAt ?? new Date().toISOString());
+          const until = status.validUntil
+            ? new Date(status.validUntil)
+            : (() => {
+                const u = new Date(from);
+                u.setFullYear(u.getFullYear() + 1);
+                return u;
+              })();
           settle(() => {
             setTicket({
               number: status.policyNumber ?? '—',

@@ -115,6 +115,9 @@ export interface EmissionStatusResponse {
   amount: number;
   vehicleTitle: string | null;
   holderName: string | null;
+  /** Real coverage window (ISO) — may be future-dated for a renewal. */
+  validFrom: string | null;
+  validUntil: string | null;
   emissionUpdatedAt: string | null;
 }
 

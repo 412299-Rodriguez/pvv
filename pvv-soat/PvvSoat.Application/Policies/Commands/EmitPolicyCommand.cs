@@ -43,13 +43,11 @@ public class EmitPolicyHandler(
             return PolicyDto.FromEntity(existingPolicy);
         }
 
-        // 5. A vehicle can't be insured twice: if it already has an active/issued
-        //    policy, return that one instead of failing.
+        // 5. If the vehicle already has an active policy, this purchase is a
+        //    RENEWAL: the new policy is future-dated to start when the current one
+        //    ends (you can't have two overlapping policies, but you can renew).
         var activePolicy = await policies.GetActiveByVehicleAsync(budget.VehicleId, ct);
-        if (activePolicy is not null)
-        {
-            return PolicyDto.FromEntity(activePolicy);
-        }
+        var coverageStart = activePolicy?.EndDate ?? DateTime.UtcNow;
 
         Policy policy = null!;
 
@@ -71,8 +69,8 @@ public class EmitPolicyHandler(
                 CompanyId = budget.CompanyId,
                 ProductId = budget.ProductId,
                 Price = budget.Price,
-                StartDate = now,
-                EndDate = now.AddDays(PolicyDurationDays),
+                StartDate = coverageStart,
+                EndDate = coverageStart.AddDays(PolicyDurationDays),
                 Status = PolicyStatus.Pending,
                 CreatedAt = now
             };

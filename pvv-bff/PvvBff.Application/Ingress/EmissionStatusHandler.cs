@@ -12,8 +12,13 @@ namespace PvvBff.Application.Ingress;
 public sealed class EmissionStatusHandler : IInternalIngressHandler
 {
     private readonly IPaymentRepository _repository;
+    private readonly ISoatGateway _soat;
 
-    public EmissionStatusHandler(IPaymentRepository repository) => _repository = repository;
+    public EmissionStatusHandler(IPaymentRepository repository, ISoatGateway soat)
+    {
+        _repository = repository;
+        _soat = soat;
+    }
 
     public string Key => "emission-status";
 
@@ -27,6 +32,20 @@ public sealed class EmissionStatusHandler : IInternalIngressHandler
         if (tx is null)
             return IngressResponse.Failure(404, "Transacción no encontrada.");
 
+        // Once emitted, fetch the real coverage window from soat (it may be
+        // future-dated for a renewal, so we can't compute it on the front).
+        DateTime? validFrom = null;
+        DateTime? validUntil = null;
+        if (!string.IsNullOrWhiteSpace(tx.PolicyNumber))
+        {
+            var dates = await _soat.GetPolicyByNumberAsync(tx.PolicyNumber, ct);
+            if (dates is not null)
+            {
+                validFrom = dates.StartDate;
+                validUntil = dates.EndDate;
+            }
+        }
+
         return IngressResponse.Success(200, new
         {
             transactionId,
@@ -36,6 +55,8 @@ public sealed class EmissionStatusHandler : IInternalIngressHandler
             amount = tx.Amount,
             vehicleTitle = tx.VehicleTitle,
             holderName = tx.HolderName,
+            validFrom,
+            validUntil,
             emissionUpdatedAt = tx.EmissionUpdatedAt,
         });
     }

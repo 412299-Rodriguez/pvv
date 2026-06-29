@@ -6,6 +6,9 @@ public sealed record SoatVehicle(Guid VehicleId, string Plate, string Brand, str
 /// <summary>Active policy data (subset of soat's PolicyDto).</summary>
 public sealed record SoatPolicy(string PolicyNumber, DateTime EndDate);
 
+/// <summary>A policy's coverage window (for the emission ticket).</summary>
+public sealed record SoatPolicyDates(DateTime StartDate, DateTime EndDate);
+
 /// <summary>Holder data to create in soat when the document isn't on file yet.</summary>
 public sealed record SoatHolderInput(string Dni, string FirstName, string LastName, string Email, string Phone);
 
@@ -27,4 +30,7 @@ public interface ISoatGateway
 
     /// <summary>Creates a budget and returns its id.</summary>
     Task<Guid> CreateBudgetAsync(SoatBudgetInput input, CancellationToken ct);
+
+    /// <summary>The coverage window of an emitted policy (null if not found).</summary>
+    Task<SoatPolicyDates?> GetPolicyByNumberAsync(string policyNumber, CancellationToken ct);
 }

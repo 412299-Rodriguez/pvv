@@ -75,7 +75,20 @@ public sealed class SoatGateway : ISoatGateway
         return dto!.BudgetId;
     }
 
+    public async Task<SoatPolicyDates?> GetPolicyByNumberAsync(string policyNumber, CancellationToken ct)
+    {
+        using var response = await _http.GetAsync($"/api/policies/{Uri.EscapeDataString(policyNumber)}", ct);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return null;
+
+        response.EnsureSuccessStatusCode();
+        var dto = await response.Content.ReadFromJsonAsync<PolicyDatesResponse>(JsonOptions, ct);
+        return dto is null ? null : new SoatPolicyDates(dto.StartDate, dto.EndDate);
+    }
+
     private sealed record VehicleResponse(Guid VehicleId, string Plate, string Brand, string Model, int Year, string VehicleType);
+
+    private sealed record PolicyDatesResponse(DateTime StartDate, DateTime EndDate);
 
     private sealed record PolicyResponse(string PolicyNumber, DateTime EndDate);
 
