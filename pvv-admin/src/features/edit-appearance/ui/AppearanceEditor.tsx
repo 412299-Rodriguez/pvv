@@ -30,7 +30,7 @@ export function AppearanceEditor({ companyId }: { companyId: string }) {
 
   useEffect(() => {
     let active = true
-    setLoading(true)
+    // `loading` already starts true; remounting (via key) resets it on company change.
     getConfig<UiConfig>(companyId, CONFIG_TYPE.ui, emptyUiConfig)
       .then((data) => {
         if (active) {

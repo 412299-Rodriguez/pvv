@@ -47,7 +47,11 @@ export function CompanyDetailPage() {
         ))}
       </div>
 
-      {tab === 'apariencia' ? <AppearanceEditor companyId={id} /> : <ProductsEditor companyId={id} />}
+      {tab === 'apariencia' ? (
+        <AppearanceEditor key={id} companyId={id} />
+      ) : (
+        <ProductsEditor key={id} companyId={id} />
+      )}
     </div>
   )
 }

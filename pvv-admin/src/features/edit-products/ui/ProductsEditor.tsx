@@ -26,7 +26,7 @@ export function ProductsEditor({ companyId }: { companyId: string }) {
 
   useEffect(() => {
     let active = true
-    setLoading(true)
+    // `loading` already starts true; remounting (via key) resets it on company change.
     Promise.all([
       getConfig<ProductConfig>(companyId, CONFIG_TYPE.product, emptyProductConfig),
       getConfig<PricingConfig>(companyId, CONFIG_TYPE.pricing, emptyPricingConfig),
