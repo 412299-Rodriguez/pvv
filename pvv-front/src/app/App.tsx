@@ -1,20 +1,24 @@
 import { useEffect } from 'react';
 
 import { WizardPage } from '@/pages/wizard';
+import { InvalidPortal } from '@/pages/invalid-portal';
 import { resolveCompanyFromUrl, usePvvConfigStore } from '@/entities/company';
 import { requestContext } from '@/shared/api';
+import { Spinner } from '@/shared/ui';
 import styles from './App.module.css';
 
 /**
  * Application root. On mount it bootstraps the tenant: resolves the company from
- * the `?c=` URL token, primes the Turnstile token, and loads + applies the
- * company's theme (colors/texts) before showing the wizard.
+ * the `?c=` URL token and loads + applies its theme. Without a valid company it
+ * shows a friendly "not a valid portal" screen instead of the wizard.
  */
 export function App() {
+  const status = usePvvConfigStore((s) => s.status);
   const loadAndApply = usePvvConfigStore((s) => s.loadAndApply);
+  const markInvalid = usePvvConfigStore((s) => s.markInvalid);
 
   useEffect(() => {
-    resolveCompanyFromUrl();
+    const token = resolveCompanyFromUrl();
 
     // Dev: Cloudflare's test secret accepts any token; the real Turnstile widget
     // is wired in a later step.
@@ -22,9 +26,24 @@ export function App() {
       import.meta.env.VITE_TURNSTILE_DEV_TOKEN ?? 'dev-turnstile-token',
     );
 
-    // Best-effort: keep the default (design-token) theme if config can't load.
-    loadAndApply().catch(() => undefined);
-  }, [loadAndApply]);
+    if (!token) {
+      markInvalid();
+      return;
+    }
+    void loadAndApply();
+  }, [loadAndApply, markInvalid]);
+
+  if (status === 'loading') {
+    return (
+      <div className={styles.loader}>
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (status === 'invalid') {
+    return <InvalidPortal />;
+  }
 
   return (
     <div className={styles.app}>

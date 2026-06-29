@@ -2,6 +2,9 @@ import { create } from 'zustand';
 
 import { ingressRequest } from '@/shared/api';
 
+/** Bootstrap status of the tenant: still loading, valid, or not a real portal. */
+export type CompanyStatus = 'loading' | 'ready' | 'invalid';
+
 /** The appearance the portal applies for the current company. */
 export interface AppearanceConfig {
   primaryColor: string | null;
@@ -22,9 +25,11 @@ interface UiConfigDto {
 }
 
 interface PvvConfigState extends AppearanceConfig {
-  loaded: boolean;
+  status: CompanyStatus;
   /** Fetch the company's UI config via the ingress and apply it as the theme. */
   loadAndApply: () => Promise<void>;
+  /** Mark the portal invalid (e.g. no/unknown company token). */
+  markInvalid: () => void;
 }
 
 /** Inject the company colors as CSS custom properties on :root. */
@@ -44,21 +49,28 @@ export const usePvvConfigStore = create<PvvConfigState>((set) => ({
   secondaryColor: null,
   logoUrl: null,
   texts: {},
-  loaded: false,
+  status: 'loading',
+
+  markInvalid: () => set({ status: 'invalid' }),
 
   loadAndApply: async () => {
-    const dto = await ingressRequest<UiConfigDto>('CONFIG_LOAD', { type: 'PVV_UI_CONFIG' });
-    const appearance: AppearanceConfig = {
-      primaryColor: dto.PrimaryColor ?? null,
-      secondaryColor: dto.SecondaryColor ?? null,
-      logoUrl: dto.LogoUrl ? dto.LogoUrl : null,
-      texts: {
-        welcome: dto.WelcomeText ?? '',
-        footer: dto.FooterText ?? '',
-        companyName: dto.CompanyDisplayName ?? '',
-      },
-    };
-    applyCssVariables(appearance);
-    set({ ...appearance, loaded: true });
+    try {
+      const dto = await ingressRequest<UiConfigDto>('CONFIG_LOAD', { type: 'PVV_UI_CONFIG' });
+      const appearance: AppearanceConfig = {
+        primaryColor: dto.PrimaryColor ?? null,
+        secondaryColor: dto.SecondaryColor ?? null,
+        logoUrl: dto.LogoUrl ? dto.LogoUrl : null,
+        texts: {
+          welcome: dto.WelcomeText ?? '',
+          footer: dto.FooterText ?? '',
+          companyName: dto.CompanyDisplayName ?? '',
+        },
+      };
+      applyCssVariables(appearance);
+      set({ ...appearance, status: 'ready' });
+    } catch {
+      // No valid company config → not a real point of sale.
+      set({ status: 'invalid' });
+    }
   },
 }));
