@@ -1,12 +1,10 @@
-import { Link } from 'react-router-dom'
+import { PagePlaceholder } from '@/shared/ui'
 
 export function CompaniesPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-slate-100">
-      <h1 className="text-2xl font-semibold text-slate-800">Compañías</h1>
-      <Link className="text-blue-600 hover:underline" to="/">
-        ← Volver al dashboard
-      </Link>
-    </main>
+    <PagePlaceholder
+      title="Compañías"
+      description="Lista y alta de compañías; al entrar a una se configura su apariencia y productos (Fase C)."
+    />
   )
 }
