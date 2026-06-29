@@ -1,0 +1,75 @@
+/* =============================================================================
+ * DESIGN TOKENS  —  single source of truth for the visual theme
+ * -----------------------------------------------------------------------------
+ * Every color, radius, shadow and motion value lives here as a CSS custom
+ * property. Components NEVER hardcode hex values; they reference `var(--token)`.
+ *
+ * THEMING (future-ready):
+ * Because all colors are declared on :root, a new theme is just an override of
+ * these variables. For example, a "dark" or per-brand theme can be added as:
+ *
+ *     :root[data-theme='ocean'] {
+ *       --color-primary: #0F76C2;
+ *       --color-primary-hover: #0B5E9C;
+ *       ...
+ *     }
+ *
+ * and toggled at runtime with `document.documentElement.dataset.theme = 'ocean'`.
+ * No component code changes required.
+ * ===========================================================================*/
+
+:root {
+  /* ---- Brand / primary ------------------------------------------------- */
+  --color-primary: #6c3ce1;
+  --color-primary-hover: #5b31c4;
+  --color-primary-glow: rgba(108, 60, 225, 0.12);
+  --color-secondary: #9c6fff;
+  --color-accent: #00e5ff;
+
+  /* ---- Surfaces & text ------------------------------------------------- */
+  --color-bg: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-violet: #f5f3ff; /* tinted panels / feature rows          */
+  --color-prefilled: #f9f7ff; /* inputs auto-filled from a found contact     */
+  --color-text: #1a1033;
+  --color-text-muted: #8b7db5;
+  --color-border: #ede9ff;
+
+  /* ---- Status ---------------------------------------------------------- */
+  --color-success: #00c853;
+  --color-success-strong: #16a34a; /* readable success text                 */
+  --color-success-bg: #f0fff4;
+  --color-success-border: #86efac;
+  --color-error: #ff5252;
+  --color-warning: #f59e0b;
+  --color-warning-bg: #fffbeb;
+  --color-warning-border: #fde68a;
+  --color-warning-text: #b45309;
+
+  /* ---- Accent surfaces ------------------------------------------------- */
+  --color-plate-navy: #1a237e; /* Argentine license-plate background        */
+  --color-mp-blue: #009ee3; /* Mercado Pago brand-ish blue                  */
+
+  /* ---- Card chips for payment networks (kept literal on purpose) -------- */
+  --color-visa: #1a1f71;
+  --color-mastercard: #eb001b;
+  --color-amex: #2e77bc;
+
+  /* ---- Radii ----------------------------------------------------------- */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 20px;
+
+  /* ---- Elevation ------------------------------------------------------- */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(108, 60, 225, 0.06);
+  --shadow-primary: 0 6px 18px rgba(108, 60, 225, 0.28);
+
+  /* ---- Typography ------------------------------------------------------ */
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Roboto Mono', ui-monospace, monospace;
+
+  /* ---- Motion ---------------------------------------------------------- */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-step: 0.32s;
+}

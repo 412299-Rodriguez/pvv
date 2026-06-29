@@ -1,0 +1,78 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  height: 54px;
+  padding: 0 24px;
+  font-weight: 700;
+  font-size: 16px;
+  border-radius: var(--radius-md);
+  transition:
+    background-color 0.2s var(--ease),
+    border-color 0.2s var(--ease),
+    filter 0.2s var(--ease),
+    transform 0.12s var(--ease);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+/* ---- primary -------------------------------------------------------------- */
+.primary {
+  background-color: var(--color-primary);
+  color: #fff;
+}
+.primary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+}
+.primary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.primary:disabled {
+  background-color: #d4caff;
+  color: #9c8fcc;
+}
+
+/* ---- outline -------------------------------------------------------------- */
+.outline {
+  background-color: var(--color-surface);
+  border: 1.5px solid var(--color-primary);
+  color: var(--color-primary);
+}
+.outline:hover:not(:disabled) {
+  background-color: var(--color-prefilled);
+}
+
+/* ---- ghost (bordered, muted) --------------------------------------------- */
+.ghostBorder {
+  background-color: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+.ghostBorder:hover:not(:disabled) {
+  border-color: var(--color-text-muted);
+}
+
+/* ---- Mercado Pago final CTA ---------------------------------------------- */
+.mercadoPago {
+  height: 56px;
+  border-radius: 12px;
+  background-image: linear-gradient(135deg, var(--color-primary) 0%, var(--color-mp-blue) 100%);
+  color: #fff;
+  gap: 10px;
+}
+.mercadoPago:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.mercadoPago:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.mercadoPago:disabled {
+  filter: grayscale(0.3) opacity(0.8);
+}

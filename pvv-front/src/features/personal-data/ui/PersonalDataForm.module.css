@@ -1,0 +1,55 @@
+.foundBanner {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background-color: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  color: var(--color-success-strong);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+.bannerIcon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.rowHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.miniBadge {
+  background-color: var(--color-surface-violet);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  padding: 4px 12px;
+  white-space: nowrap;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+@media (min-width: 540px) {
+  .formGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.cta {
+  margin-top: 8px;
+}

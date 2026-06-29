@@ -1,0 +1,119 @@
+.summary {
+  position: sticky;
+  top: 148px;
+}
+
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+}
+
+.heading {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.icon {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-violet);
+  color: var(--color-primary);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.value {
+  font-size: 15px;
+  font-weight: 700;
+}
+.value small {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.divider {
+  height: 1px;
+  background-color: var(--color-border);
+  margin: 16px 0;
+}
+
+.productLabel,
+.totalLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.productLabel {
+  margin-bottom: 5px;
+}
+.totalLabel {
+  margin-top: 14px;
+}
+
+.product {
+  font-size: 14px;
+  font-weight: 700;
+}
+.empty {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.total {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  min-height: 38px;
+}
+.per {
+  font-size: 15px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.emit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--color-success-bg);
+  color: var(--color-success-strong);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 14px;
+}
+.emit svg {
+  width: 14px;
+  height: 14px;
+}

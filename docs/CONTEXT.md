@@ -85,7 +85,7 @@ en Argentina, soportando múltiples compañías aseguradoras desde una misma pla
 - Nunca lógica de negocio en componentes — extraer a custom hooks o stores Zustand
 - Siempre tipar explícitamente, nunca usar `any`
 - Axios instance centralizada en `shared/api`, nunca fetch directo en componentes
-- CSS solo con clases Tailwind, nunca estilos inline salvo valores dinámicos (CSS vars)
+- Estilos con **CSS Modules + design tokens** (un `*.module.css` por componente; todos los colores/radios/sombras como CSS custom properties en `app/styles/tokens.css`). Nunca estilos inline salvo valores dinámicos (CSS vars). _Decisión Sprint 2 / HU-05: el mockup reusado (`pvv-front`) está hecho con CSS Modules y ya es mobile-first; las CSS vars encajan mejor con el theming dinámico desde pvv-config. Reemplaza la regla original de "solo Tailwind"; se descartó el setup Tailwind del scaffold._
 
 ---
 

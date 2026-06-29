@@ -1,0 +1,66 @@
+.stage {
+  max-width: 1040px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 48px 24px 64px;
+  /* Center the active screen vertically in the remaining viewport. */
+  min-height: calc(100vh - 110px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.panel {
+  animation: slideFade var(--duration-step) var(--ease);
+}
+@keyframes slideFade {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ---- Step 1: intro + plate ---------------------------------------------- */
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (min-width: 820px) {
+  .twoCol {
+    grid-template-columns: 40fr 60fr;
+    gap: 32px;
+  }
+}
+
+/* ---- Step 2: document --------------------------------------------------- */
+.narrow {
+  max-width: 540px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ---- Step 3: personal data ---------------------------------------------- */
+.wide {
+  max-width: 680px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ---- Step 4: coverage + summary ----------------------------------------- */
+.payLayout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (min-width: 860px) {
+  .payLayout {
+    grid-template-columns: 62fr 35fr;
+  }
+}

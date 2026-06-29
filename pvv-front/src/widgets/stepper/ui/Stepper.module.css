@@ -1,0 +1,97 @@
+.wrap {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.stepper {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 26px 24px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  position: relative;
+}
+
+.line {
+  position: absolute;
+  top: calc(26px + 28px);
+  height: 3px;
+  left: 60px;
+  right: 60px;
+  background-color: var(--color-border);
+  z-index: 1;
+  overflow: hidden;
+  border-radius: 2px;
+}
+.line i {
+  display: block;
+  height: 100%;
+  background-color: var(--color-primary);
+  transition: width 0.5s var(--ease);
+}
+
+.stp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11px;
+  width: 120px;
+  z-index: 2;
+  background: transparent;
+}
+.clickable {
+  cursor: pointer;
+}
+
+.dot {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background-color: var(--color-border);
+  color: var(--color-text-muted);
+  transition:
+    background-color 0.35s var(--ease),
+    color 0.35s var(--ease),
+    transform 0.35s var(--ease);
+}
+.dot svg {
+  width: 28px;
+  height: 28px;
+}
+
+.active .dot {
+  background-color: var(--color-primary);
+  color: #fff;
+  transform: scale(1.05);
+  box-shadow: var(--shadow-primary);
+}
+.done .dot {
+  background-color: var(--color-success);
+  color: #fff;
+}
+.check {
+  stroke-width: 2;
+}
+
+.label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  transition: color 0.3s var(--ease);
+  line-height: 1.2;
+  text-align: center;
+}
+.active .label {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+.done .label {
+  color: var(--color-success);
+  font-weight: 700;
+}

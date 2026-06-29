@@ -1,0 +1,226 @@
+.result {
+  max-width: 520px;
+  margin: 8px auto;
+  position: relative;
+}
+
+.state {
+  text-align: center;
+  padding: 40px 16px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.titleLg {
+  font-size: 26px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+.subtitle {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+/* ---- emitting progress bar ----------------------------------------------- */
+.bar {
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--color-border);
+  max-width: 320px;
+  margin: 22px auto 0;
+  overflow: hidden;
+}
+.barFill {
+  display: block;
+  height: 100%;
+  width: 0;
+  background-color: var(--color-primary);
+  border-radius: 3px;
+  animation: fill 2.6s ease-out forwards;
+}
+@keyframes fill {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+/* ---- success check ring -------------------------------------------------- */
+.ring {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 20px;
+}
+.ring svg {
+  width: 100%;
+  height: 100%;
+}
+.ringCircle {
+  stroke: var(--color-success);
+  stroke-width: 3;
+  fill: none;
+  stroke-dasharray: 201;
+  stroke-dashoffset: 201;
+  animation: drawRing 0.6s var(--ease) forwards;
+}
+.ringTick {
+  stroke: var(--color-success);
+  stroke-width: 4;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: drawTick 0.3s var(--ease) 0.6s forwards;
+}
+@keyframes drawRing {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes drawTick {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ---- confetti ------------------------------------------------------------ */
+.confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+}
+.confetti i {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  top: -12px;
+  opacity: 0;
+  animation-name: fall;
+  animation-timing-function: var(--ease);
+  animation-fill-mode: forwards;
+}
+@keyframes fall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(440px) rotate(540deg);
+  }
+}
+
+/* ---- ticket -------------------------------------------------------------- */
+.ticket {
+  margin-top: 24px;
+  text-align: left;
+}
+.ticketHead {
+  background-color: var(--color-primary);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: 20px 28px;
+}
+.ticketLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.7);
+}
+.ticketNumber {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  margin-top: 4px;
+}
+.ticketBody {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+.perforation {
+  border-top: 2px dashed var(--color-border);
+}
+.ticketGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 24px;
+}
+.cellLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.cellValue {
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: 3px;
+}
+.ticketFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--color-border);
+  padding: 16px 24px;
+}
+.footLabel {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+.footValue {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- error --------------------------------------------------------------- */
+.errorIcon {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 22px;
+  border-radius: 50%;
+  background-color: rgba(255, 82, 82, 0.12);
+  display: grid;
+  place-items: center;
+  color: var(--color-error);
+}
+.errorIcon svg {
+  width: 46px;
+  height: 46px;
+}
+
+/* ---- buttons ------------------------------------------------------------- */
+.buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+.buttons > * {
+  flex: 1;
+  height: 48px;
+  font-size: 15px;
+}
+.buttons svg {
+  width: 18px;
+  height: 18px;
+}
+@media (max-width: 460px) {
+  .buttons {
+    flex-direction: column;
+  }
+}

@@ -15,6 +15,11 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Path aliases (mirror vite.config.ts; resolved relative to this file in TS 6+) */
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
     /* Strict type-checking */
     "strict": true,
     "noUncheckedIndexedAccess": true,

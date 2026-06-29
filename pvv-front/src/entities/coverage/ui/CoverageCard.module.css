@@ -1,0 +1,139 @@
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    border-color 0.2s var(--ease),
+    box-shadow 0.2s var(--ease);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.card:hover {
+  border-color: #c4b5fd;
+}
+.selected {
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-glow);
+}
+
+.head {
+  min-height: 48px;
+  padding: 13px 18px;
+  background-color: var(--color-surface-violet);
+  position: relative;
+}
+.selected .head {
+  background-color: var(--color-primary);
+}
+
+.name {
+  font-size: 15px;
+  font-weight: 700;
+  transition: color 0.2s var(--ease);
+}
+.type {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  transition: color 0.2s var(--ease);
+}
+.selected .name {
+  color: #fff;
+}
+.selected .type {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.headCheck {
+  display: none;
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  color: #fff;
+  font-weight: 800;
+  font-size: 18px;
+}
+.selected .headCheck {
+  display: block;
+}
+
+.badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: var(--color-accent);
+  color: var(--color-text);
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 0 var(--radius-lg) 0 var(--radius-sm);
+  padding: 4px 10px;
+  z-index: 2;
+}
+.selected .badge {
+  display: none;
+}
+
+.body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+}
+
+.shield {
+  color: var(--color-primary);
+}
+.shield svg {
+  width: 32px;
+  height: 32px;
+}
+
+.price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.amount {
+  font-size: 31px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.per {
+  font-size: 15px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.benefit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.benefit svg {
+  width: 14px;
+  height: 14px;
+  color: var(--color-success);
+  stroke-width: 2.5;
+  flex-shrink: 0;
+}
+
+.selectBtn {
+  height: 44px;
+  font-size: 14px;
+  margin-top: auto;
+}
+.selected .selectBtn {
+  background-color: var(--color-primary-hover);
+}

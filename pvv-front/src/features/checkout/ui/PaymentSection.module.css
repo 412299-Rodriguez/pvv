@@ -1,0 +1,108 @@
+.section {
+  margin-top: 24px;
+  /* Reveal animation when the section first mounts (coverage selected). */
+  animation: slideDown 0.4s var(--ease);
+}
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.heading {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.mpCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition:
+    border-color 0.2s var(--ease),
+    background-color 0.2s var(--ease);
+}
+.selected {
+  border-color: var(--color-mp-blue);
+  background-color: #f0f9ff;
+}
+
+.mpCircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: var(--color-mp-blue);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.mpCircle svg {
+  width: 26px;
+  height: 26px;
+}
+
+.mpText b {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+}
+.mpText span {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.networks {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.net {
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0 8px;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.mpCheck {
+  margin-left: auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 1.5px solid var(--color-border);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background-color: var(--color-mp-blue);
+  border-color: var(--color-mp-blue);
+}
+.mpCheck svg {
+  width: 12px;
+  height: 12px;
+}
+
+.btnSpinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
