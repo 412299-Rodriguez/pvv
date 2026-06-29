@@ -16,6 +16,18 @@
   text-align: center;
 }
 
+.loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.loaderText {
+  color: var(--color-text-muted);
+  font-size: 15px;
+  font-weight: 600;
+}
+
 .brand {
   display: flex;
   align-items: center;
