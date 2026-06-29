@@ -43,6 +43,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
+// RFC 7807 ProblemDetails for unhandled exceptions.
+builder.Services.AddProblemDetails();
+
+// CORS for the front (and admin) SPA origins.
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? ["http://localhost:5173"];
+builder.Services.AddCors(options => options.AddPolicy("pvv-spa", policy => policy
+    .WithOrigins(corsOrigins)
+    .AllowAnyHeader()
+    .AllowAnyMethod()
+    .AllowCredentials()));
+
 // Security / session middleware options.
 builder.Services.Configure<TurnstileOptions>(
     builder.Configuration.GetSection(TurnstileOptions.SectionName));
@@ -78,6 +90,9 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Unhandled exceptions → RFC 7807 ProblemDetails (must wrap everything).
+app.UseExceptionHandler();
+
 app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment())
@@ -87,6 +102,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
+
+app.UseCors("pvv-spa");
 
 app.UseAuthentication();
 app.UseAuthorization();
