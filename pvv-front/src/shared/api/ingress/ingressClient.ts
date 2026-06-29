@@ -16,10 +16,9 @@
  * Because callers only depend on the signatures, that swap is a drop-in.
  */
 import { generatePolicyNumber } from '@/entities/policy';
-import { demoPolicyholder } from '@/entities/policyholder';
 import { availableCoverages } from '@/entities/coverage';
 
-import { ingressRequest } from './ingressRequest';
+import { ingressRequest, IngressError } from './ingressRequest';
 import type {
   CheckPlateRequest,
   CheckPlateResponse,
@@ -44,14 +43,36 @@ export async function checkPlate(req: CheckPlateRequest): Promise<CheckPlateResp
   return ingressRequest<CheckPlateResponse>('PLATE_SEARCH', { plate: req.plate });
 }
 
+/** soat's holder shape (subset) returned by HOLDER_LOOKUP. */
+interface SoatHolderResponse {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+}
+
 export async function lookupHolder(req: LookupHolderRequest): Promise<LookupHolderResponse> {
-  await delay(MOCK_LATENCY_MS);
-  // Mock: any well-formed document "matches" the demo contact.
-  const found = req.documentNumber.trim().length > 0;
-  return {
-    found,
-    holder: found ? { ...demoPolicyholder } : null,
-  };
+  // Real (HU-10): HOLDER_LOOKUP proxies GET /api/holders/{dni} in soat.
+  try {
+    const holder = await ingressRequest<SoatHolderResponse>('HOLDER_LOOKUP', {
+      dni: req.documentNumber,
+    });
+    return {
+      found: true,
+      holder: {
+        firstName: holder.firstName,
+        lastName: holder.lastName,
+        email: holder.email,
+        phone: holder.phone,
+      },
+    };
+  } catch (error) {
+    // 404 → no customer with that document; the user fills the form manually.
+    if (error instanceof IngressError && error.statusCode === 404) {
+      return { found: false, holder: null };
+    }
+    throw error;
+  }
 }
 
 export async function getQuote(_req: GetQuoteRequest): Promise<GetQuoteResponse> {
