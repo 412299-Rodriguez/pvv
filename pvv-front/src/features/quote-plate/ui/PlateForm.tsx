@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useSessionStore, selectCanSubmitPlate } from '@/entities/session';
+import { checkPlate } from '@/shared/api/ingress';
 import { Card, Button, Checkbox, CheckIcon, LockIcon } from '@/shared/ui';
 import { normalizePlate, isPlateValid } from '@/shared/lib';
 import styles from './PlateForm.module.css';
@@ -14,10 +15,22 @@ export function PlateForm() {
   const termsAccepted = useSessionStore((s) => s.termsAccepted);
   const setPlate = useSessionStore((s) => s.setPlate);
   const toggleTerms = useSessionStore((s) => s.toggleTerms);
-  const submitPlate = useSessionStore((s) => s.submitPlate);
+  const applyPlateCheck = useSessionStore((s) => s.applyPlateCheck);
   const canSubmit = useSessionStore(selectCanSubmitPlate);
 
+  const [checking, setChecking] = useState(false);
   const plateOk = isPlateValid(plate);
+
+  // Run the (mock) backend plate lookup, then let the store decide what's next.
+  const handleSubmit = async () => {
+    setChecking(true);
+    try {
+      const result = await checkPlate({ plate });
+      applyPlateCheck(result);
+    } finally {
+      setChecking(false);
+    }
+  };
 
   return (
     <Card>
@@ -59,10 +72,10 @@ export function PlateForm() {
         variant="primary"
         fullWidth
         className={styles.cta}
-        disabled={!canSubmit}
-        onClick={submitPlate}
+        disabled={!canSubmit || checking}
+        onClick={handleSubmit}
       >
-        Cotizar mi seguro →
+        {checking ? 'Cotizando…' : 'Cotizar mi seguro →'}
       </Button>
 
       <div className={styles.secureNote}>

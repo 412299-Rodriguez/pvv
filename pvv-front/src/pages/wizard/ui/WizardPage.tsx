@@ -1,5 +1,5 @@
 import { useSessionStore } from '@/entities/session';
-import { VehicleCard, demoVehicle } from '@/entities/vehicle';
+import { VehicleCard } from '@/entities/vehicle';
 
 import { Stepper } from '@/widgets/stepper';
 import { PurchaseSummary } from '@/widgets/purchase-summary';
@@ -25,6 +25,7 @@ import styles from './WizardPage.module.css';
  */
 export function WizardPage() {
   const step = useSessionStore((s) => s.step);
+  const vehicle = useSessionStore((s) => s.vehicle);
   const hasCoverage = useSessionStore((s) => s.selectedCoverageId !== null);
 
   return (
@@ -43,14 +44,14 @@ export function WizardPage() {
           {step === 'document' && (
             <div className={styles.narrow}>
               <DocumentForm />
-              <VehicleCard vehicle={demoVehicle} />
+              {vehicle && <VehicleCard vehicle={vehicle} />}
             </div>
           )}
 
           {step === 'personal' && (
             <div className={styles.wide}>
               <PersonalDataForm />
-              <VehicleCard vehicle={demoVehicle} />
+              {vehicle && <VehicleCard vehicle={vehicle} />}
             </div>
           )}
 

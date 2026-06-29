@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useSessionStore } from '@/entities/session';
 import { DOCUMENT_TYPES } from '@/entities/policyholder';
+import { lookupHolder } from '@/shared/api/ingress';
 import { Card, SegmentedControl, TextField, Button, UserIcon } from '@/shared/ui';
 import { digitsOnly } from '@/shared/lib';
 import styles from './DocumentForm.module.css';
@@ -14,7 +16,21 @@ export function DocumentForm() {
   const documentNumber = useSessionStore((s) => s.documentNumber);
   const setDocumentType = useSessionStore((s) => s.setDocumentType);
   const setDocumentNumber = useSessionStore((s) => s.setDocumentNumber);
-  const submitDocument = useSessionStore((s) => s.submitDocument);
+  const applyHolderLookup = useSessionStore((s) => s.applyHolderLookup);
+  const skipHolderLookup = useSessionStore((s) => s.skipHolderLookup);
+
+  const [searching, setSearching] = useState(false);
+
+  // "Continuar": run the (mock) holder lookup and pre-fill personal data.
+  const handleSearch = async () => {
+    setSearching(true);
+    try {
+      const result = await lookupHolder({ documentType, documentNumber });
+      applyHolderLookup(result);
+    } finally {
+      setSearching(false);
+    }
+  };
 
   return (
     <Card>
@@ -46,8 +62,8 @@ export function DocumentForm() {
         className={styles.field}
       />
 
-      <Button variant="primary" fullWidth onClick={() => submitDocument(true)}>
-        Continuar →
+      <Button variant="primary" fullWidth disabled={searching} onClick={handleSearch}>
+        {searching ? 'Buscando…' : 'Continuar →'}
       </Button>
 
       <div className={styles.linkRow}>
@@ -55,7 +71,7 @@ export function DocumentForm() {
           href="#"
           onClick={(e) => {
             e.preventDefault();
-            submitDocument(false);
+            if (!searching) skipHolderLookup();
           }}
         >
           No tengo documento a mano → Continuar sin buscar

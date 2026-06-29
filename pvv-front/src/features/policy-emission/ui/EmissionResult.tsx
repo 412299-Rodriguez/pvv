@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 
 import { useSessionStore } from '@/entities/session';
-import { EMISSION_DURATION_MS } from '@/shared/config';
+import { emitPolicy, policyholderToHolder } from '@/shared/api/ingress';
 import { Button, Spinner, DownloadIcon } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib';
 import styles from './EmissionResult.module.css';
@@ -16,16 +16,34 @@ const CONFETTI_COLORS = ['#6c3ce1', '#00e5ff', '#00c853', '#9c6fff', '#f59e0b'];
 export function EmissionResult() {
   const emission = useSessionStore((s) => s.emission);
   const issuedPolicy = useSessionStore((s) => s.issuedPolicy);
-  const finishEmission = useSessionStore((s) => s.finishEmission);
+  const applyEmissionResult = useSessionStore((s) => s.applyEmissionResult);
+  const failEmission = useSessionStore((s) => s.failEmission);
   const startEmission = useSessionStore((s) => s.startEmission);
   const reset = useSessionStore((s) => s.reset);
 
-  // Drive the emission timer while in the "emitting" state.
+  const plate = useSessionStore((s) => s.plate);
+  const selectedCoverageId = useSessionStore((s) => s.selectedCoverageId);
+  const policyholder = useSessionStore((s) => s.policyholder);
+
+  // Drive the (mock) emission while in the "emitting" state.
   useEffect(() => {
     if (emission !== 'emitting') return;
-    const id = window.setTimeout(() => finishEmission('success'), EMISSION_DURATION_MS);
-    return () => window.clearTimeout(id);
-  }, [emission, finishEmission]);
+    let active = true;
+    emitPolicy({
+      plate,
+      coverageId: selectedCoverageId ?? '',
+      holder: policyholderToHolder(policyholder),
+    })
+      .then((result) => {
+        if (active) applyEmissionResult(result);
+      })
+      .catch(() => {
+        if (active) failEmission();
+      });
+    return () => {
+      active = false;
+    };
+  }, [emission, plate, selectedCoverageId, policyholder, applyEmissionResult, failEmission]);
 
   // Stable confetti layout per success render.
   const confetti = useMemo(

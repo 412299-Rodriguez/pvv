@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useSessionStore } from '@/entities/session';
-import { demoExistingPolicy } from '@/entities/policy';
 import { Button } from '@/shared/ui';
 import styles from './RenewPolicyModal.module.css';
 
@@ -12,13 +11,18 @@ import styles from './RenewPolicyModal.module.css';
  */
 export function RenewPolicyModal() {
   const isOpen = useSessionStore((s) => s.isRenewModalOpen);
+  const existingPolicy = useSessionStore((s) => s.existingPolicy);
   const confirm = useSessionStore((s) => s.confirmRenewal);
   const cancel = useSessionStore((s) => s.cancelRenewal);
 
-  // Local state: the chosen renewal start date (ISO yyyy-mm-dd).
-  const [startDate, setStartDate] = useState(demoExistingPolicy.earliestRenewalIso);
+  // Local state: the chosen renewal start date (ISO yyyy-mm-dd). Defaults to the
+  // earliest valid date once the existing policy is known.
+  const [startDate, setStartDate] = useState('');
+  useEffect(() => {
+    if (existingPolicy) setStartDate(existingPolicy.earliestRenewalIso);
+  }, [existingPolicy]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !existingPolicy) return null;
 
   return (
     <div
@@ -41,9 +45,9 @@ export function RenewPolicyModal() {
         </div>
 
         <div className={styles.policyBox}>
-          <div className={styles.policyNumber}>Póliza {demoExistingPolicy.number}</div>
+          <div className={styles.policyNumber}>Póliza {existingPolicy.number}</div>
           <div className={styles.policyUntil}>
-            Vigente hasta el {demoExistingPolicy.validUntil}
+            Vigente hasta el {existingPolicy.validUntil}
           </div>
         </div>
 
@@ -60,7 +64,7 @@ export function RenewPolicyModal() {
             type="date"
             className={styles.dateInput}
             value={startDate}
-            min={demoExistingPolicy.earliestRenewalIso}
+            min={existingPolicy.earliestRenewalIso}
             onChange={(e) => setStartDate(e.target.value)}
           />
         </div>

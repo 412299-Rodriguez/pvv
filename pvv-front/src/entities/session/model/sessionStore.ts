@@ -1,18 +1,16 @@
 import { create } from 'zustand';
 
-import { ACTIVE_POLICY_TRIGGER_PLATE } from '@/shared/config';
 import { formatDate } from '@/shared/lib';
+import { holderToPolicyholder } from '@/shared/api/ingress';
 
 import { demoVehicle, vehicleTitle } from '@/entities/vehicle';
 import {
   demoPolicyholder,
-  demoDocumentNumber,
   demoDocumentType,
   emptyPolicyholder,
   policyholderFullName,
 } from '@/entities/policyholder';
 import { findCoverage } from '@/entities/coverage';
-import { generatePolicyNumber } from '@/entities/policy';
 
 import type { SessionState, SessionStore } from './types';
 
@@ -24,6 +22,8 @@ const initialState: SessionState = {
   termsAccepted: false,
   renewalAcknowledged: false,
   isRenewModalOpen: false,
+  vehicle: null,
+  existingPolicy: null,
 
   documentType: demoDocumentType,
   documentNumber: '',
@@ -40,12 +40,11 @@ const initialState: SessionState = {
 /**
  * Zustand store holding the whole purchase session.
  *
- * Components subscribe with selectors (see `selectors.ts` and the `useSession`
- * hooks) so they only re-render when the slice they read changes.
- *
- * Side effects with timers (payment processing, emission delay) are NOT run
- * here — the store only flips status flags. The owning feature component drives
- * the timing via effects, which keeps the store pure and easy to test.
+ * Components subscribe with selectors (see `selectors.ts`) so they only
+ * re-render when the slice they read changes. The store itself performs NO
+ * network or timing side effects — feature components call the
+ * `shared/api/ingress` client and hand the result back through the `apply…`
+ * actions, which keeps this store pure and easy to test.
  */
 export const useSessionStore = create<SessionStore>((set, get) => ({
   ...initialState,
@@ -56,15 +55,14 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   setPlate: (plate) => set({ plate }),
   toggleTerms: () => set((s) => ({ termsAccepted: !s.termsAccepted })),
 
-  submitPlate: () => {
-    const { plate, renewalAcknowledged } = get();
-    const compact = plate.replace(/\s/g, '').toUpperCase();
-    // Demo: this plate simulates a vehicle that already has active coverage.
-    if (compact === ACTIVE_POLICY_TRIGGER_PLATE && !renewalAcknowledged) {
-      set({ isRenewModalOpen: true });
-      return;
-    }
-    set({ step: 'document' });
+  applyPlateCheck: (result) => {
+    const blockedByActivePolicy = result.hasActivePolicy && !get().renewalAcknowledged;
+    set({
+      vehicle: result.vehicle,
+      existingPolicy: result.existingPolicy,
+      isRenewModalOpen: blockedByActivePolicy,
+      step: blockedByActivePolicy ? get().step : 'document',
+    });
   },
 
   confirmRenewal: () =>
@@ -75,24 +73,20 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   setDocumentType: (documentType) => set({ documentType }),
   setDocumentNumber: (documentNumber) => set({ documentNumber }),
 
-  submitDocument: (withContact) => {
-    if (withContact) {
+  applyHolderLookup: (result) => {
+    if (result.found && result.holder) {
       set({
         contactFound: true,
-        policyholder: { ...demoPolicyholder },
-        // If the user did not type a document, fall back to the demo one so the
-        // summary still shows a coherent value.
-        documentNumber: get().documentNumber || demoDocumentNumber,
+        policyholder: holderToPolicyholder(result.holder),
         step: 'personal',
       });
     } else {
-      set({
-        contactFound: false,
-        policyholder: { ...emptyPolicyholder },
-        step: 'personal',
-      });
+      set({ contactFound: false, policyholder: { ...emptyPolicyholder }, step: 'personal' });
     }
   },
+
+  skipHolderLookup: () =>
+    set({ contactFound: false, policyholder: { ...emptyPolicyholder }, step: 'personal' }),
 
   // ---- Step 3 ----------------------------------------------------------
   setPolicyholderField: (field, value) =>
@@ -105,29 +99,23 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   // ---- Step 5 ----------------------------------------------------------
   startEmission: () => set({ step: 'result', emission: 'emitting', issuedPolicy: null }),
 
-  finishEmission: (result) => {
-    if (result === 'error') {
-      set({ emission: 'error', issuedPolicy: null });
-      return;
-    }
-    const { policyholder, selectedCoverageId } = get();
+  applyEmissionResult: (result) => {
+    const { policyholder, selectedCoverageId, vehicle } = get();
     const coverage = findCoverage(selectedCoverageId);
-    const from = new Date();
-    const until = new Date();
-    until.setFullYear(until.getFullYear() + 1);
-
     set({
       emission: 'success',
       issuedPolicy: {
-        number: generatePolicyNumber(),
-        vehicleTitle: vehicleTitle(demoVehicle),
+        number: result.policyNumber,
+        vehicleTitle: vehicleTitle(vehicle ?? demoVehicle),
         holderName: policyholderFullName(policyholder) || policyholderFullName(demoPolicyholder),
-        validFrom: formatDate(from),
-        validUntil: formatDate(until),
+        validFrom: formatDate(new Date(result.validFromIso)),
+        validUntil: formatDate(new Date(result.validUntilIso)),
         pricePaid: coverage?.pricePerYear ?? 0,
       },
     });
   },
+
+  failEmission: () => set({ emission: 'error', issuedPolicy: null }),
 
   reset: () => set({ ...initialState }),
 }));
