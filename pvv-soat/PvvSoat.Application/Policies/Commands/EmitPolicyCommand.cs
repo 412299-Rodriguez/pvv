@@ -35,19 +35,20 @@ public class EmitPolicyHandler(
             throw new ValidationException($"Budget '{budget.BudgetId}' has expired.");
         }
 
-        // 4. There must be no policy already emitted for this budget.
+        // 4. Idempotency: if a policy was already emitted for this budget, return it
+        //    (handles duplicate emission messages without failing).
         var existingPolicy = await policies.GetByBudgetIdAsync(budget.BudgetId, ct);
         if (existingPolicy is not null)
         {
-            throw new ConflictException(
-                $"A policy already exists for budget '{budget.BudgetId}'.");
+            return PolicyDto.FromEntity(existingPolicy);
         }
 
-        // 5. There must be no active/issued policy for the same vehicle + company.
-        if (await policies.HasActivePolicyForVehicleAndCompanyAsync(budget.VehicleId, budget.CompanyId, ct))
+        // 5. A vehicle can't be insured twice: if it already has an active/issued
+        //    policy, return that one instead of failing.
+        var activePolicy = await policies.GetActiveByVehicleAsync(budget.VehicleId, ct);
+        if (activePolicy is not null)
         {
-            throw new ConflictException(
-                "An active policy already exists for this vehicle and company.");
+            return PolicyDto.FromEntity(activePolicy);
         }
 
         Policy policy = null!;

@@ -9,6 +9,8 @@ import styles from './PaymentResultPage.module.css';
 type ResultState = 'emitting' | 'success' | 'error';
 
 const POLL_MS = 2000;
+/** Keep the "Emitiendo…" screen up at least this long so it's actually visible. */
+const MIN_EMITTING_MS = 2600;
 
 /**
  * Post-payment result page (/?tx=...). Polls EMISSION_STATUS until the policy is
@@ -28,6 +30,15 @@ export function PaymentResultPage() {
 
     let active = true;
     let timer = 0;
+    const startedAt = Date.now();
+
+    // Settle to a terminal state, but not before MIN_EMITTING_MS so the loader shows.
+    const settle = (apply: () => void) => {
+      const wait = Math.max(0, MIN_EMITTING_MS - (Date.now() - startedAt));
+      timer = window.setTimeout(() => {
+        if (active) apply();
+      }, wait);
+    };
 
     const poll = async () => {
       try {
@@ -35,7 +46,7 @@ export function PaymentResultPage() {
         if (!active) return;
 
         if (status.paymentStatus === 'Failed' || status.paymentStatus === 'Abandoned') {
-          setState('error');
+          settle(() => setState('error'));
           return;
         }
 
@@ -43,20 +54,22 @@ export function PaymentResultPage() {
           const from = new Date(status.emissionUpdatedAt ?? new Date().toISOString());
           const until = new Date(from);
           until.setFullYear(until.getFullYear() + 1);
-          setTicket({
-            number: status.policyNumber ?? '—',
-            vehicleTitle: status.vehicleTitle ?? '—',
-            holderName: status.holderName ?? '—',
-            validFrom: formatDate(from),
-            validUntil: formatDate(until),
-            pricePaid: status.amount,
+          settle(() => {
+            setTicket({
+              number: status.policyNumber ?? '—',
+              vehicleTitle: status.vehicleTitle ?? '—',
+              holderName: status.holderName ?? '—',
+              validFrom: formatDate(from),
+              validUntil: formatDate(until),
+              pricePaid: status.amount,
+            });
+            setState('success');
           });
-          setState('success');
           return;
         }
 
         if (status.emissionStatus === 'failed' || status.emissionStatus === 'retry-exhausted') {
-          setState('error');
+          settle(() => setState('error'));
           return;
         }
 
