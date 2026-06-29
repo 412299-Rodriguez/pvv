@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import {
   CONFIG_TYPE,
   VEHICLE_TYPES,
+  VEHICLE_TYPE_LABELS,
   emptyPricingConfig,
   emptyProductConfig,
   getConfig,
@@ -190,7 +191,7 @@ export function ProductsEditor({ companyId }: { companyId: string }) {
                 >
                   {VEHICLE_TYPES.map((v) => (
                     <option key={v} value={v}>
-                      {v}
+                      {VEHICLE_TYPE_LABELS[v] ?? v}
                     </option>
                   ))}
                 </select>

@@ -12,6 +12,7 @@ export {
   emptyProductConfig,
   emptyPricingConfig,
   VEHICLE_TYPES,
+  VEHICLE_TYPE_LABELS,
   UI_TEXT_FIELDS,
 } from './model/types'
 export { getConfig, putConfig } from './api/configApi'

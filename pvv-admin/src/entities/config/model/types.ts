@@ -66,8 +66,16 @@ export const emptyUiConfig: UiConfig = {
 export const emptyProductConfig: ProductConfig = { Products: [] }
 export const emptyPricingConfig: PricingConfig = { Rules: [] }
 
-/** Vehicle types pvv-soat understands (for pricing rules). */
+/** Vehicle types pvv-soat understands (for pricing rules) — values stay in English. */
 export const VEHICLE_TYPES = ['Car', 'Motorcycle', 'Truck', 'Van'] as const
+
+/** Spanish labels shown to the operator (the stored value stays English). */
+export const VEHICLE_TYPE_LABELS: Record<string, string> = {
+  Car: 'Auto',
+  Motorcycle: 'Moto',
+  Truck: 'Camioneta',
+  Van: 'Utilitario',
+}
 
 /** Known UI text keys the portal reads, with friendly labels for the editor. */
 export const UI_TEXT_FIELDS: { key: string; label: string }[] = [
