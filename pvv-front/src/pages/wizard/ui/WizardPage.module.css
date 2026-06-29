@@ -3,7 +3,8 @@
   width: 100%;
   margin: 0 auto;
   padding: 28px 24px 32px;
-  /* Content flows from the top so the screens fit the viewport without scroll. */
+  /* Reserve viewport height so short screens can center vertically (see .panel). */
+  min-height: calc(100vh - 200px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -28,7 +29,13 @@
 /* The active screen spans the stage width; inner steps cap their own width. */
 .panel {
   width: 100%;
+  /* Center the screen vertically when it's shorter than the stage. */
+  margin-block: auto;
   animation: slideFade var(--duration-step) var(--ease);
+}
+/* Step 1 is the tall screen — keep it pinned to the top so it never scrolls. */
+.panel:has(.step1) {
+  margin-block: 0;
 }
 @keyframes slideFade {
   from {
