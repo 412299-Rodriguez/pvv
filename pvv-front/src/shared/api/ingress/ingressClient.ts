@@ -15,12 +15,11 @@
  *
  * Because callers only depend on the signatures, that swap is a drop-in.
  */
-import { ACTIVE_POLICY_TRIGGER_PLATE } from '@/shared/config';
-import { demoVehicle } from '@/entities/vehicle';
-import { demoExistingPolicy, generatePolicyNumber } from '@/entities/policy';
+import { generatePolicyNumber } from '@/entities/policy';
 import { demoPolicyholder } from '@/entities/policyholder';
 import { availableCoverages } from '@/entities/coverage';
 
+import { ingressRequest } from './ingressRequest';
 import type {
   CheckPlateRequest,
   CheckPlateResponse,
@@ -40,14 +39,9 @@ const MOCK_EMIT_LATENCY_MS = 2200;
 const delay = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
 export async function checkPlate(req: CheckPlateRequest): Promise<CheckPlateResponse> {
-  await delay(MOCK_LATENCY_MS);
-  const compact = req.plate.replace(/\s/g, '').toUpperCase();
-  const hasActivePolicy = compact === ACTIVE_POLICY_TRIGGER_PLATE;
-  return {
-    vehicle: { ...demoVehicle },
-    hasActivePolicy,
-    existingPolicy: hasActivePolicy ? { ...demoExistingPolicy } : null,
-  };
+  // Real (HU-10): PLATE_SEARCH aggregates the vehicle + active policy in the BFF.
+  // A 404 (unknown plate) surfaces as an IngressError the caller handles.
+  return ingressRequest<CheckPlateResponse>('PLATE_SEARCH', { plate: req.plate });
 }
 
 export async function lookupHolder(req: LookupHolderRequest): Promise<LookupHolderResponse> {

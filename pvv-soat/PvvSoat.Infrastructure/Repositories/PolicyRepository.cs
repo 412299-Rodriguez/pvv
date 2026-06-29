@@ -14,6 +14,12 @@ public class PolicyRepository(SoatDbContext context) : IPolicyRepository
     public Task<Policy?> GetByBudgetIdAsync(Guid budgetId, CancellationToken ct) =>
         context.Policies.FirstOrDefaultAsync(p => p.BudgetId == budgetId, ct);
 
+    public Task<Policy?> GetActiveByVehicleAsync(Guid vehicleId, CancellationToken ct) =>
+        context.Policies.FirstOrDefaultAsync(
+            p => p.VehicleId == vehicleId
+                 && (p.Status == PolicyStatus.Active || p.Status == PolicyStatus.Issued),
+            ct);
+
     public Task<bool> HasActivePolicyForVehicleAndCompanyAsync(
         Guid vehicleId, Guid companyId, CancellationToken ct) =>
         context.Policies.AnyAsync(

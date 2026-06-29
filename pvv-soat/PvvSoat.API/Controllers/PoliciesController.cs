@@ -26,6 +26,20 @@ public class PoliciesController(IMediator mediator) : ControllerBase
         return CreatedAtAction(nameof(GetByNumber), new { number = result.PolicyNumber }, result);
     }
 
+    /// <summary>Gets the active/issued policy for a plate (for the plate search).</summary>
+    /// <response code="200">An active policy exists for the plate.</response>
+    /// <response code="404">No active policy for that plate.</response>
+    [HttpGet("active/{plate}")]
+    [ProducesResponseType(typeof(PolicyDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetActiveByPlate(string plate, CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetActivePolicyByPlateQuery(plate), ct);
+        return result is null
+            ? Problem(detail: $"No active policy for plate '{plate}'.", statusCode: StatusCodes.Status404NotFound)
+            : Ok(result);
+    }
+
     /// <summary>Gets a policy by its policy number.</summary>
     /// <response code="200">The policy was found.</response>
     /// <response code="404">No policy exists with that number.</response>

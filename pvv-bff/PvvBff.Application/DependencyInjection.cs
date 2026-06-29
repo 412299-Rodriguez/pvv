@@ -21,6 +21,7 @@ public static class DependencyInjection
         // DI-built registry. Add one line per new concern; no central switch.
         services.AddScoped<IInternalIngressHandler, CompanyConfigHandler>();
         services.AddScoped<IInternalIngressHandler, PaymentInitHandler>();
+        services.AddScoped<IInternalIngressHandler, PlateSearchHandler>();
 
         return services;
     }

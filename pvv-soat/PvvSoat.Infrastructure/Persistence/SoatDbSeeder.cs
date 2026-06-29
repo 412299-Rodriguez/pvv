@@ -26,59 +26,94 @@ public static class SoatDbSeeder
 
         var now = DateTime.UtcNow;
 
-        context.Vehicles.AddRange(
-            new Vehicle
-            {
-                VehicleId = Guid.NewGuid(),
-                Plate = "AA001BB",
-                Brand = "Toyota",
-                Model = "Corolla",
-                Year = 2021,
-                VehicleType = VehicleType.Car,
-                CreatedAt = now
-            },
-            new Vehicle
-            {
-                VehicleId = Guid.NewGuid(),
-                Plate = "AC123BD",
-                Brand = "Volkswagen",
-                Model = "Amarok",
-                Year = 2023,
-                VehicleType = VehicleType.Truck,
-                CreatedAt = now
-            },
-            new Vehicle
-            {
-                VehicleId = Guid.NewGuid(),
-                Plate = "MNO456",
-                Brand = "Honda",
-                Model = "CG Titan",
-                Year = 2019,
-                VehicleType = VehicleType.Motorcycle,
-                CreatedAt = now
-            });
+        var corolla = new Vehicle
+        {
+            VehicleId = Guid.NewGuid(),
+            Plate = "AA001BB",
+            Brand = "Toyota",
+            Model = "Corolla",
+            Year = 2021,
+            VehicleType = VehicleType.Car,
+            CreatedAt = now
+        };
+        var amarok = new Vehicle
+        {
+            VehicleId = Guid.NewGuid(),
+            Plate = "AC123BD",
+            Brand = "Volkswagen",
+            Model = "Amarok",
+            Year = 2023,
+            VehicleType = VehicleType.Truck,
+            CreatedAt = now
+        };
+        var titan = new Vehicle
+        {
+            VehicleId = Guid.NewGuid(),
+            Plate = "MNO456",
+            Brand = "Honda",
+            Model = "CG Titan",
+            Year = 2019,
+            VehicleType = VehicleType.Motorcycle,
+            CreatedAt = now
+        };
+        context.Vehicles.AddRange(corolla, amarok, titan);
 
-        context.Holders.AddRange(
-            new Holder
-            {
-                HolderId = Guid.NewGuid(),
-                DNI = "30111222",
-                FirstName = "Juan",
-                LastName = "Perez",
-                Email = "juan.perez@example.com",
-                Phone = "3510000001",
-                CreatedAt = now
-            },
-            new Holder
-            {
-                HolderId = Guid.NewGuid(),
-                DNI = "28999888",
-                FirstName = "Maria",
-                LastName = "Gomez",
-                Email = "maria.gomez@example.com",
-                Phone = "3510000002",
-                CreatedAt = now
-            });
+        var juan = new Holder
+        {
+            HolderId = Guid.NewGuid(),
+            DNI = "30111222",
+            FirstName = "Juan",
+            LastName = "Perez",
+            Email = "juan.perez@example.com",
+            Phone = "3510000001",
+            CreatedAt = now
+        };
+        var maria = new Holder
+        {
+            HolderId = Guid.NewGuid(),
+            DNI = "28999888",
+            FirstName = "Maria",
+            LastName = "Gomez",
+            Email = "maria.gomez@example.com",
+            Phone = "3510000002",
+            CreatedAt = now
+        };
+        context.Holders.AddRange(juan, maria);
+
+        // AC123BD (Amarok) already has an ACTIVE policy → exercises the
+        // "your vehicle is already insured" flow. AA001BB and MNO456 have none →
+        // normal purchase flow.
+        var companyId = Guid.NewGuid();
+        var productId = Guid.NewGuid();
+        var budget = new Budget
+        {
+            BudgetId = Guid.NewGuid(),
+            VehicleId = amarok.VehicleId,
+            HolderId = maria.HolderId,
+            CompanyId = companyId,
+            ProductId = productId,
+            Price = 89000m,
+            ValidUntil = now.AddMinutes(30),
+            Status = BudgetStatus.Converted,
+            CreatedAt = now
+        };
+        context.Budgets.Add(budget);
+
+        context.Policies.Add(new Policy
+        {
+            PolicyId = Guid.NewGuid(),
+            PolicyNumber = "PVV-2025-000777",
+            BudgetId = budget.BudgetId,
+            VehicleId = amarok.VehicleId,
+            HolderId = maria.HolderId,
+            CompanyId = companyId,
+            ProductId = productId,
+            Price = 89000m,
+            StartDate = now.AddMonths(-2),
+            EndDate = now.AddMonths(10),
+            Status = PolicyStatus.Active,
+            CreatedAt = now
+        });
 
         await context.SaveChangesAsync(ct);
     }

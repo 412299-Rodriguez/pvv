@@ -48,6 +48,9 @@ public static class DependencyInjection
         services.Configure<InternalServicesOptions>(
             configuration.GetSection(InternalServicesOptions.SectionName));
         services.AddHttpClient("internal");
+        var soatBaseUrl = configuration["Services:SoatBaseUrl"] ?? "http://localhost:5001";
+        services.AddHttpClient<ISoatGateway, Soat.SoatGateway>(client =>
+            client.BaseAddress = new Uri(soatBaseUrl));
         services.AddScoped<IRouteStore, RedisRouteStore>();
         services.AddScoped<IInternalHttpProxy, HttpInternalProxy>();
         services.AddScoped<ICompanyConfigReader, RedisCompanyConfigReader>();

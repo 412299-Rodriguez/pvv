@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useSessionStore, selectCanSubmitPlate } from '@/entities/session';
-import { checkPlate } from '@/shared/api/ingress';
+import { checkPlate, IngressError } from '@/shared/api/ingress';
 import { Card, Button, Checkbox, CheckIcon, LockIcon } from '@/shared/ui';
 import { normalizePlate, isPlateValid } from '@/shared/lib';
 import styles from './PlateForm.module.css';
@@ -19,6 +19,7 @@ export function PlateForm() {
   const canSubmit = useSessionStore(selectCanSubmitPlate);
 
   const [checking, setChecking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const plateOk = isPlateValid(plate);
 
   // Normalize and cap at 7 alphanumeric characters (Mercosur plate max).
@@ -30,9 +31,16 @@ export function PlateForm() {
   // Run the (mock) backend plate lookup, then let the store decide what's next.
   const handleSubmit = async () => {
     setChecking(true);
+    setError(null);
     try {
       const result = await checkPlate({ plate });
       applyPlateCheck(result);
+    } catch (e) {
+      setError(
+        e instanceof IngressError
+          ? e.message
+          : 'No pudimos validar la patente. Intentá de nuevo.',
+      );
     } finally {
       setChecking(false);
     }
@@ -83,6 +91,8 @@ export function PlateForm() {
       >
         {checking ? 'Cotizando…' : 'Cotizar mi seguro →'}
       </Button>
+
+      {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.secureNote}>
         <LockIcon />
