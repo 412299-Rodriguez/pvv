@@ -1,10 +1,12 @@
-import { PagePlaceholder } from '@/shared/ui'
+import { useSessionStore } from '@/entities/session'
+import { ProductsEditor } from '@/features/edit-products'
 
 export function ProductsPage() {
-  return (
-    <PagePlaceholder
-      title="Productos"
-      description="Productos y reglas de precios por tipo de vehículo y año (Fase B)."
-    />
-  )
+  const companyId = useSessionStore((s) => s.companyId)
+
+  if (!companyId) {
+    return <p className="text-sm text-slate-500">Tu usuario no tiene una compañía asociada.</p>
+  }
+
+  return <ProductsEditor companyId={companyId} />
 }

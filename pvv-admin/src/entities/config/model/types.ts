@@ -1,0 +1,90 @@
+// Config blobs are stored/served PascalCase (exactly as pvv-config persists them);
+// the editors read and write these shapes verbatim.
+
+export interface FaqItem {
+  Question: string
+  Answer: string
+}
+
+export interface UiConfig {
+  PrimaryColor: string
+  SecondaryColor: string
+  LogoUrl: string
+  CompanyDisplayName: string
+  WelcomeText: string
+  FooterText: string
+  Texts: Record<string, string>
+  AdImages: string[]
+  TermsText: string
+  PrivacyText: string
+  Faqs: FaqItem[]
+}
+
+export interface ProductItem {
+  ProductId: string
+  Name: string
+  CoverageType: string
+  Conditions: string
+  IsActive: boolean
+}
+export interface ProductConfig {
+  Products: ProductItem[]
+}
+
+export interface PricingRule {
+  PricingId: string
+  ProductId: string
+  VehicleType: string
+  YearFrom: number
+  YearTo: number
+  Price: number
+}
+export interface PricingConfig {
+  Rules: PricingRule[]
+}
+
+export const CONFIG_TYPE = {
+  ui: 'PVV_UI_CONFIG',
+  product: 'PRODUCT_CONFIG',
+  pricing: 'PRICING_CONFIG',
+} as const
+
+export const emptyUiConfig: UiConfig = {
+  PrimaryColor: '#0071ce',
+  SecondaryColor: '#003d7a',
+  LogoUrl: '',
+  CompanyDisplayName: '',
+  WelcomeText: '',
+  FooterText: '',
+  Texts: {},
+  AdImages: [],
+  TermsText: '',
+  PrivacyText: '',
+  Faqs: [],
+}
+
+export const emptyProductConfig: ProductConfig = { Products: [] }
+export const emptyPricingConfig: PricingConfig = { Rules: [] }
+
+/** Vehicle types pvv-soat understands (for pricing rules). */
+export const VEHICLE_TYPES = ['Car', 'Motorcycle', 'Truck', 'Van'] as const
+
+/** Known UI text keys the portal reads, with friendly labels for the editor. */
+export const UI_TEXT_FIELDS: { key: string; label: string }[] = [
+  { key: 'introTitle', label: 'Título principal' },
+  { key: 'introSubtitle', label: 'Subtítulo' },
+  { key: 'feature1Title', label: 'Beneficio 1 — título' },
+  { key: 'feature1Text', label: 'Beneficio 1 — texto' },
+  { key: 'feature2Title', label: 'Beneficio 2 — título' },
+  { key: 'feature2Text', label: 'Beneficio 2 — texto' },
+  { key: 'feature3Title', label: 'Beneficio 3 — título' },
+  { key: 'feature3Text', label: 'Beneficio 3 — texto' },
+  { key: 'ratingText', label: 'Texto de reputación' },
+  { key: 'plateTitle', label: 'Paso patente — título' },
+  { key: 'plateSubtitle', label: 'Paso patente — subtítulo' },
+  { key: 'plateCta', label: 'Botón cotizar' },
+  { key: 'secureNote', label: 'Nota de seguridad' },
+  { key: 'holderTitle', label: 'Paso titular — título' },
+  { key: 'holderSubtitle', label: 'Paso titular — subtítulo' },
+  { key: 'coverageTitle', label: 'Paso cobertura — título' },
+]

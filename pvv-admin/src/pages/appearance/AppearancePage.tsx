@@ -1,12 +1,12 @@
 import { useSessionStore } from '@/entities/session'
-import { PagePlaceholder } from '@/shared/ui'
+import { AppearanceEditor } from '@/features/edit-appearance'
 
 export function AppearancePage() {
   const companyId = useSessionStore((s) => s.companyId)
-  return (
-    <PagePlaceholder
-      title="Apariencia"
-      description={`Branding, textos, anuncios, legales y FAQ de tu compañía (Fase B). Company: ${companyId ?? '—'}.`}
-    />
-  )
+
+  if (!companyId) {
+    return <p className="text-sm text-slate-500">Tu usuario no tiene una compañía asociada.</p>
+  }
+
+  return <AppearanceEditor companyId={companyId} />
 }
