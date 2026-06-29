@@ -22,7 +22,9 @@ public sealed class SoatGateway : ISoatGateway
 
         response.EnsureSuccessStatusCode();
         var dto = await response.Content.ReadFromJsonAsync<VehicleResponse>(JsonOptions, ct);
-        return dto is null ? null : new SoatVehicle(dto.Plate, dto.Brand, dto.Model, dto.Year);
+        return dto is null
+            ? null
+            : new SoatVehicle(dto.Plate, dto.Brand, dto.Model, dto.Year, dto.VehicleType);
     }
 
     public async Task<SoatPolicy?> GetActivePolicyByPlateAsync(string plate, CancellationToken ct)
@@ -36,7 +38,7 @@ public sealed class SoatGateway : ISoatGateway
         return dto is null ? null : new SoatPolicy(dto.PolicyNumber, dto.EndDate);
     }
 
-    private sealed record VehicleResponse(string Plate, string Brand, string Model, int Year);
+    private sealed record VehicleResponse(string Plate, string Brand, string Model, int Year, string VehicleType);
 
     private sealed record PolicyResponse(string PolicyNumber, DateTime EndDate);
 }

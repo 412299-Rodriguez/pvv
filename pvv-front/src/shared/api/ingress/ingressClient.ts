@@ -16,7 +16,6 @@
  * Because callers only depend on the signatures, that swap is a drop-in.
  */
 import { generatePolicyNumber } from '@/entities/policy';
-import { availableCoverages } from '@/entities/coverage';
 
 import { ingressRequest, IngressError } from './ingressRequest';
 import type {
@@ -30,8 +29,6 @@ import type {
   EmitPolicyResponse,
 } from './contracts';
 
-/** Simulated network round-trip for lookups. */
-const MOCK_LATENCY_MS = 600;
 /** Emission is intentionally slower so the "Emitiendo…" screen is visible. */
 const MOCK_EMIT_LATENCY_MS = 2200;
 
@@ -75,9 +72,10 @@ export async function lookupHolder(req: LookupHolderRequest): Promise<LookupHold
   }
 }
 
-export async function getQuote(_req: GetQuoteRequest): Promise<GetQuoteResponse> {
-  await delay(MOCK_LATENCY_MS);
-  return { coverages: availableCoverages };
+export async function getQuote(req: GetQuoteRequest): Promise<GetQuoteResponse> {
+  // Real (HU-10): QUOTE builds the coverages from the company's PRODUCT_CONFIG +
+  // PRICING_CONFIG, priced by the vehicle's type and year.
+  return ingressRequest<GetQuoteResponse>('QUOTE', { plate: req.plate });
 }
 
 export async function emitPolicy(_req: EmitPolicyRequest): Promise<EmitPolicyResponse> {

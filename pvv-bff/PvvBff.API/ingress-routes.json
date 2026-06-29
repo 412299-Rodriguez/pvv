@@ -15,6 +15,13 @@
       "targetService": "pvv-soat"
     },
     {
+      "hash": "QUOTE",
+      "method": "POST",
+      "endpoint": "internal://quote",
+      "timeoutSeconds": 15,
+      "targetService": "pvv-bff"
+    },
+    {
       "hash": "BUDGET_CALC",
       "method": "POST",
       "endpoint": "http://localhost:5001/api/budgets",
