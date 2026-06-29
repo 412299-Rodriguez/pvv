@@ -14,7 +14,9 @@ builder.Host.UseSerilog((context, _, configuration) => configuration
 // Infrastructure layer (MongoDB + RabbitMQ connection factory).
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// The emission background service.
+// Emission retry policy + the background service.
+builder.Services.Configure<EmissionOptions>(
+    builder.Configuration.GetSection(EmissionOptions.SectionName));
 builder.Services.AddHostedService<EmissionWorker>();
 
 var app = builder.Build();

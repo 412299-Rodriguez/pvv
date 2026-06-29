@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using PvvEmission.Application.Emission;
 using PvvEmission.Application.Messaging;
 using RabbitMQ.Client;
@@ -21,6 +22,7 @@ public sealed class EmissionWorker : BackgroundService
 
     private readonly ConnectionFactory _connectionFactory;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly EmissionOptions _options;
     private readonly ILogger<EmissionWorker> _logger;
 
     private IConnection? _connection;
@@ -29,10 +31,12 @@ public sealed class EmissionWorker : BackgroundService
     public EmissionWorker(
         ConnectionFactory connectionFactory,
         IServiceScopeFactory scopeFactory,
+        IOptions<EmissionOptions> options,
         ILogger<EmissionWorker> logger)
     {
         _connectionFactory = connectionFactory;
         _scopeFactory = scopeFactory;
+        _options = options.Value;
         _logger = logger;
     }
 
@@ -88,23 +92,52 @@ public sealed class EmissionWorker : BackgroundService
         var emitter = scope.ServiceProvider.GetRequiredService<IPolicyEmitter>();
         var store = scope.ServiceProvider.GetRequiredService<IEmissionStatusStore>();
 
-        await store.MarkEmittingAsync(message.TransactionId, attempt: 1, ct);
+        var delays = _options.RetryDelaysSeconds.Length > 0
+            ? _options.RetryDelaysSeconds
+            : EmissionOptions.DefaultRetryDelaysSeconds;
+        var maxAttempts = delays.Length + 1;
 
-        var outcome = await emitter.EmitAsync(message.BudgetId, ct);
-        if (outcome.Result is EmitResult.Success or EmitResult.AlreadyEmitted)
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            await store.MarkSuccessAsync(message.TransactionId, outcome.PolicyNumber, attempt: 1, ct);
-            _logger.LogInformation("Emitted policy {Policy} for tx {Tx}",
-                outcome.PolicyNumber, message.TransactionId);
-        }
-        else
-        {
-            // HU-09/9B adds exponential-backoff retry and dead-lettering here.
-            await store.MarkFailedAsync(message.TransactionId, "failed", attempt: 1, ct);
-            _logger.LogWarning("Emission failed for tx {Tx}: {Error}", message.TransactionId, outcome.Error);
-        }
+            await store.MarkEmittingAsync(message.TransactionId, attempt, ct);
+            var outcome = await emitter.EmitAsync(message.BudgetId, ct);
 
-        await _channel!.BasicAckAsync(ea.DeliveryTag, multiple: false, ct);
+            switch (outcome.Result)
+            {
+                // Emitted (or already emitted — idempotent): done.
+                case EmitResult.Success or EmitResult.AlreadyEmitted:
+                    await store.MarkSuccessAsync(message.TransactionId, outcome.PolicyNumber, attempt, ct);
+                    await _channel!.BasicAckAsync(ea.DeliveryTag, multiple: false, ct);
+                    _logger.LogInformation("Emitted policy {Policy} for tx {Tx} (attempt {Attempt})",
+                        outcome.PolicyNumber, message.TransactionId, attempt);
+                    return;
+
+                // Bad/missing budget: retrying won't help → dead-letter.
+                case EmitResult.InvalidData:
+                    await store.MarkFailedAsync(message.TransactionId, "failed", attempt, ct);
+                    await _channel!.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: false, ct);
+                    _logger.LogWarning("Emission permanently failed for tx {Tx}: {Error} → DLQ",
+                        message.TransactionId, outcome.Error);
+                    return;
+
+                // Transient: back off and retry, or dead-letter once exhausted.
+                case EmitResult.Transient:
+                    if (attempt <= delays.Length)
+                    {
+                        var delay = TimeSpan.FromSeconds(delays[attempt - 1]);
+                        _logger.LogWarning(
+                            "Transient emit failure for tx {Tx} (attempt {Attempt}): {Error}; retrying in {Delay}s",
+                            message.TransactionId, attempt, outcome.Error, delay.TotalSeconds);
+                        await Task.Delay(delay, ct);
+                        continue;
+                    }
+
+                    await store.MarkFailedAsync(message.TransactionId, "retry-exhausted", attempt, ct);
+                    await _channel!.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: false, ct);
+                    _logger.LogError("Emission retries exhausted for tx {Tx} → DLQ", message.TransactionId);
+                    return;
+            }
+        }
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
