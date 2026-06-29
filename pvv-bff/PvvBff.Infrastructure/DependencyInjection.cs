@@ -6,6 +6,7 @@ using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using PvvBff.Application.Abstractions;
 using PvvBff.Infrastructure.Ingress;
+using PvvBff.Infrastructure.Messaging;
 using PvvBff.Infrastructure.Payments;
 using StackExchange.Redis;
 
@@ -55,7 +56,10 @@ public static class DependencyInjection
         services.Configure<PaymentOptions>(configuration.GetSection(PaymentOptions.SectionName));
         services.AddSingleton<IPaymentGateway, MockPaymentGateway>();
 
-        // TODO HU-08/8B: RabbitMQ emission publisher + payment webhook.
+        // Messaging (HU-08/8B) — RabbitMQ publisher for emission jobs.
+        services.Configure<RabbitMqOptions>(configuration.GetSection(RabbitMqOptions.SectionName));
+        services.AddSingleton<IEmissionPublisher, RabbitMqEmissionPublisher>();
+
         // TODO HU-07: Mongo lead repositories.
 
         return services;

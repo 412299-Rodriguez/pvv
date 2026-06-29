@@ -190,6 +190,20 @@ queue.OnMessage(channelMessage => HandleAsync(channelMessage.Message, ct));
   pasar el `RedisValue` directo es **ambiguo** entre las sobrecargas `string` y `ReadOnlySpan<byte>`.
 - Los payloads se publican en camelCase, así que el deserializer necesita `PropertyNameCaseInsensitive = true`.
 
+### RabbitMQ.Client 7.x — API asíncrona (HU-08)
+- El cliente 7.x es **async**: `ConnectionFactory.CreateConnectionAsync(ct)`,
+  `connection.CreateChannelAsync(cancellationToken: ct)`, `channel.QueueDeclareAsync(...)`,
+  `channel.BasicPublishAsync(exchange, routingKey, mandatory, basicProperties, body, ct)`.
+  (Las sobrecargas síncronas de versiones viejas ya no aplican.)
+- Propiedades del mensaje: `new BasicProperties { Persistent = true, ContentType = "application/json" }`.
+- Publicar directo a una cola = exchange `""` (default) + `routingKey` = nombre de la cola.
+- DLQ por argumentos al declarar la cola principal: `x-dead-letter-exchange = ""` +
+  `x-dead-letter-routing-key = "pvv_emission_dlq"`. **El publisher (BFF) y el consumer
+  (pvv-emission, HU-09) deben declarar la cola con LOS MISMOS argumentos** o RabbitMQ
+  tira `PRECONDITION_FAILED`.
+- `IConnection` es caro: reusar uno (singleton, lazy con `SemaphoreSlim`) y abrir un
+  `IChannel` por publish (los channels no son thread-safe para publish concurrente).
+
 ### Otras decisiones del Sprint 1 (válidas para todos los servicios)
 - **EF Core 10** (no 9): empareja con el SDK .NET 10 y `dotnet-ef` 10.0.8.
 - **Interfaces de repositorio en la capa Application** (no Infrastructure): con el grafo
