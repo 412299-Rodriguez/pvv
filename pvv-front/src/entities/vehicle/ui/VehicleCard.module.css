@@ -43,7 +43,15 @@
   font-size: 18px;
   font-weight: 800;
   letter-spacing: -0.01em;
-  margin: 2px 0 7px;
+  margin: 2px 0 8px;
+}
+
+/* Plate chip and the "verified" pill sit together on one row. */
+.plateRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .plate {
@@ -59,7 +67,6 @@
 }
 
 .pill {
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -68,7 +75,7 @@
   font-size: 12px;
   font-weight: 700;
   border-radius: var(--radius-pill);
-  padding: 7px 13px;
+  padding: 6px 12px;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -78,11 +85,11 @@
   stroke-width: 2.6;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 520px) {
   .card {
-    flex-wrap: wrap;
+    padding: 14px 16px;
   }
-  .pill {
-    margin-left: 70px;
+  .name {
+    font-size: 16px;
   }
 }

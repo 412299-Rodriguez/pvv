@@ -51,6 +51,14 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
 
   goTo: (step) => set({ step }),
 
+  goBack: () =>
+    set((s) => {
+      const order: SessionState['step'][] = ['plate', 'document', 'personal', 'checkout'];
+      const index = order.indexOf(s.step);
+      const previous = index > 0 ? order[index - 1] : undefined;
+      return previous ? { step: previous } : {};
+    }),
+
   // ---- Step 1 ----------------------------------------------------------
   setPlate: (plate) => set({ plate }),
   toggleTerms: () => set((s) => ({ termsAccepted: !s.termsAccepted })),

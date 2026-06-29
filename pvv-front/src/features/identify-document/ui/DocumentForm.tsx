@@ -8,8 +8,8 @@ import styles from './DocumentForm.module.css';
 
 /**
  * Step 2 — identify the policyholder by document.
- * "Continuar" simulates a contact lookup (pre-fills demo data); the secondary
- * link continues without a lookup so the user fills everything manually.
+ * A document number is required; "Continuar" runs the (mock) contact lookup and
+ * pre-fills the personal-data form.
  */
 export function DocumentForm() {
   const documentType = useSessionStore((s) => s.documentType);
@@ -17,12 +17,16 @@ export function DocumentForm() {
   const setDocumentType = useSessionStore((s) => s.setDocumentType);
   const setDocumentNumber = useSessionStore((s) => s.setDocumentNumber);
   const applyHolderLookup = useSessionStore((s) => s.applyHolderLookup);
-  const skipHolderLookup = useSessionStore((s) => s.skipHolderLookup);
+  const goBack = useSessionStore((s) => s.goBack);
 
   const [searching, setSearching] = useState(false);
 
+  // A document is mandatory to continue (min length covers a short DNI).
+  const canContinue = documentNumber.trim().length >= 7;
+
   // "Continuar": run the (mock) holder lookup and pre-fill personal data.
   const handleSearch = async () => {
+    if (!canContinue) return;
     setSearching(true);
     try {
       const result = await lookupHolder({ documentType, documentNumber });
@@ -62,20 +66,18 @@ export function DocumentForm() {
         className={styles.field}
       />
 
-      <Button variant="primary" fullWidth disabled={searching} onClick={handleSearch}>
-        {searching ? 'Buscando…' : 'Continuar →'}
-      </Button>
-
-      <div className={styles.linkRow}>
-        <a
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            if (!searching) skipHolderLookup();
-          }}
+      <div className={styles.actions}>
+        <Button variant="ghostBorder" onClick={goBack}>
+          ← Volver
+        </Button>
+        <Button
+          variant="primary"
+          className={styles.grow}
+          disabled={searching || !canContinue}
+          onClick={handleSearch}
         >
-          No tengo documento a mano → Continuar sin buscar
-        </a>
+          {searching ? 'Buscando…' : 'Continuar →'}
+        </Button>
       </div>
     </Card>
   );

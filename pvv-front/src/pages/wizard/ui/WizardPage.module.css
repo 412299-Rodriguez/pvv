@@ -3,14 +3,17 @@
   width: 100%;
   margin: 0 auto;
   padding: 48px 24px 64px;
-  /* Center the active screen vertically in the remaining viewport. */
+  /* Center the active screen both vertically and horizontally. */
   min-height: calc(100vh - 110px);
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
 }
 
+/* The active screen spans the stage width; inner steps cap their own width. */
 .panel {
+  width: 100%;
   animation: slideFade var(--duration-step) var(--ease);
 }
 @keyframes slideFade {
@@ -30,11 +33,20 @@
   grid-template-columns: 1fr;
   gap: 24px;
   align-items: start;
+  width: 100%;
+}
+/* Mobile: show the plate form first, the intro/benefits card below it. */
+.twoCol > *:last-child {
+  order: -1;
 }
 @media (min-width: 820px) {
   .twoCol {
     grid-template-columns: 40fr 60fr;
     gap: 32px;
+  }
+  /* Desktop: restore the intro | plate two-column order. */
+  .twoCol > *:last-child {
+    order: 0;
   }
 }
 
@@ -58,9 +70,39 @@
   grid-template-columns: 1fr;
   gap: 24px;
   align-items: start;
+  width: 100%;
 }
 @media (min-width: 860px) {
   .payLayout {
     grid-template-columns: 62fr 35fr;
   }
+}
+/* Leave room so the fixed mobile pay bar never covers the summary. */
+@media (max-width: 760px) {
+  .payLayout {
+    padding-bottom: 92px;
+  }
+}
+
+/* ---- Back navigation ---------------------------------------------------- */
+.backRow {
+  width: 100%;
+  margin-bottom: 8px;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  transition:
+    color 0.2s var(--ease),
+    background-color 0.2s var(--ease);
+}
+.back:hover {
+  color: var(--color-primary);
+  background-color: var(--color-surface-violet);
 }

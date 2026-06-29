@@ -93,6 +93,24 @@
   height: 12px;
 }
 
+/* Pay action: spaced from the card on desktop, fixed floating bar on mobile. */
+.payBar {
+  margin-top: 22px;
+}
+@media (max-width: 760px) {
+  .payBar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin-top: 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    background-color: var(--color-surface);
+    box-shadow: 0 -6px 20px rgba(26, 16, 51, 0.12);
+    z-index: 50;
+  }
+}
+
 .btnSpinner {
   width: 18px;
   height: 18px;

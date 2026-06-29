@@ -14,7 +14,7 @@
 .plate {
   background-color: var(--color-plate-navy);
   border-radius: var(--radius-md);
-  padding: 24px 28px;
+  padding: clamp(16px, 4vw, 24px) clamp(12px, 4vw, 28px);
   text-align: center;
   box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.3);
 }
@@ -23,9 +23,10 @@
   border: none;
   outline: none;
   color: #fff;
-  font-size: 42px;
+  /* Fluid so a 7-character plate never overflows on small screens. */
+  font-size: clamp(26px, 8vw, 42px);
   font-weight: 800;
-  letter-spacing: 9px;
+  letter-spacing: clamp(3px, 1.6vw, 9px);
   text-align: center;
   width: 100%;
   text-transform: uppercase;
@@ -33,7 +34,7 @@
 }
 .plateInput::placeholder {
   color: rgba(255, 255, 255, 0.4);
-  letter-spacing: 9px;
+  letter-spacing: clamp(3px, 1.6vw, 9px);
 }
 
 .terms {

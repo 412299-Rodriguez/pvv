@@ -21,14 +21,16 @@ export function VehicleCard({ vehicle, verified = true }: VehicleCardProps) {
       <div className={styles.body}>
         <div className={styles.eyebrow}>Tu vehículo</div>
         <div className={styles.name}>{vehicleTitle(vehicle)}</div>
-        <span className={styles.plate}>{vehicle.plate}</span>
+        <div className={styles.plateRow}>
+          <span className={styles.plate}>{vehicle.plate}</span>
+          {verified && (
+            <span className={styles.pill}>
+              <CheckIcon />
+              Verificado
+            </span>
+          )}
+        </div>
       </div>
-      {verified && (
-        <span className={styles.pill}>
-          <CheckIcon />
-          Verificado
-        </span>
-      )}
     </div>
   );
 }

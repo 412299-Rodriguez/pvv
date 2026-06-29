@@ -57,6 +57,8 @@ export interface SessionState {
 /** Actions available on the session store. */
 export interface SessionActions {
   goTo: (step: WizardStep) => void;
+  /** Step one screen back through the data-entry flow (no-op on plate/result). */
+  goBack: () => void;
 
   setPlate: (plate: string) => void;
   toggleTerms: () => void;

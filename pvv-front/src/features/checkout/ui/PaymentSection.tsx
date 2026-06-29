@@ -58,24 +58,26 @@ export function PaymentSection() {
         </div>
       </div>
 
-      <Button
-        variant="mercadoPago"
-        fullWidth
-        disabled={processing}
-        onClick={() => setProcessing(true)}
-      >
-        {processing ? (
-          <>
-            <span className={styles.btnSpinner} />
-            Procesando...
-          </>
-        ) : (
-          <>
-            <MercadoPagoMark swooshColor="var(--color-primary)" />
-            Pagar con Mercado Pago →
-          </>
-        )}
-      </Button>
+      <div className={styles.payBar}>
+        <Button
+          variant="mercadoPago"
+          fullWidth
+          disabled={processing}
+          onClick={() => setProcessing(true)}
+        >
+          {processing ? (
+            <>
+              <span className={styles.btnSpinner} />
+              Procesando...
+            </>
+          ) : (
+            <>
+              <MercadoPagoMark swooshColor="var(--color-primary)" />
+              Pagar ahora
+            </>
+          )}
+        </Button>
+      </div>
     </section>
   );
 }

@@ -42,7 +42,9 @@ export function CoverageSelector() {
         Elegí tu cobertura
       </h2>
       {loading ? (
-        <Spinner />
+        <div className={styles.loading}>
+          <Spinner />
+        </div>
       ) : (
         <div className={styles.grid}>
           {coverages.map((coverage) => (

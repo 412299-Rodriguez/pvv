@@ -19,6 +19,13 @@
   cursor: not-allowed;
 }
 
+/* Keep any icon inside a button to a sane size (icons have no intrinsic size). */
+.btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 .fullWidth {
   width: 100%;
 }

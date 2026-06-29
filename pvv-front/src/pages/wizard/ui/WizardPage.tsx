@@ -27,12 +27,25 @@ export function WizardPage() {
   const step = useSessionStore((s) => s.step);
   const vehicle = useSessionStore((s) => s.vehicle);
   const hasCoverage = useSessionStore((s) => s.selectedCoverageId !== null);
+  const goBack = useSessionStore((s) => s.goBack);
+
+  // The document and personal steps place "Volver" inline next to their CTA, so
+  // only the checkout step needs the top-left back control here.
+  const showTopBack = step === 'checkout';
 
   return (
     <>
       <Stepper />
 
       <main className={styles.stage}>
+        {showTopBack && (
+          <div className={styles.backRow}>
+            <button type="button" className={styles.back} onClick={goBack}>
+              ← Volver
+            </button>
+          </div>
+        )}
+
         <div key={step} className={styles.panel}>
           {step === 'plate' && (
             <div className={styles.twoCol}>
@@ -51,7 +64,6 @@ export function WizardPage() {
           {step === 'personal' && (
             <div className={styles.wide}>
               <PersonalDataForm />
-              {vehicle && <VehicleCard vehicle={vehicle} />}
             </div>
           )}
 

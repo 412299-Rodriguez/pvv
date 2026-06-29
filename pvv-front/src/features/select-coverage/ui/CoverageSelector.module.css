@@ -13,6 +13,12 @@
   color: var(--color-primary);
 }
 
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
 .grid {
   display: grid;
   grid-template-columns: 1fr;

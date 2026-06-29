@@ -50,6 +50,12 @@
   }
 }
 
-.cta {
-  margin-top: 8px;
+/* Back + primary actions on one row (Volver next to Ver mi cotización). */
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+.grow {
+  flex: 1;
 }

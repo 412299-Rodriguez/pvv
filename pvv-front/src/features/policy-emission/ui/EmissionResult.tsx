@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 
 import { useSessionStore } from '@/entities/session';
 import { emitPolicy, policyholderToHolder } from '@/shared/api/ingress';
-import { Button, Spinner, DownloadIcon } from '@/shared/ui';
+import { Button, Spinner } from '@/shared/ui';
 import { formatCurrency } from '@/shared/lib';
 import styles from './EmissionResult.module.css';
 
@@ -87,7 +87,6 @@ export function EmissionResult() {
           </div>
 
           <h2 className={styles.titleLg}>¡Tu seguro está listo! 🎉</h2>
-          <p className={styles.subtitle}>Te enviamos una copia a tu email</p>
 
           {/* Policy ticket */}
           <div className={styles.ticket}>
@@ -111,17 +110,8 @@ export function EmissionResult() {
           </div>
 
           <div className={styles.buttons}>
-            <Button
-              variant="outline"
-              onClick={() => {
-                // Placeholder: a real build would generate / download the PDF.
-              }}
-            >
-              <DownloadIcon />
-              Descargar póliza PDF
-            </Button>
             <Button variant="primary" onClick={reset}>
-              Nueva consulta
+              Volver al inicio
             </Button>
           </div>
         </div>
@@ -144,7 +134,7 @@ export function EmissionResult() {
               Reintentar
             </Button>
             <Button variant="primary" onClick={reset}>
-              Nueva consulta
+              Volver al inicio
             </Button>
           </div>
         </div>

@@ -21,6 +21,12 @@ export function PlateForm() {
   const [checking, setChecking] = useState(false);
   const plateOk = isPlateValid(plate);
 
+  // Normalize and cap at 7 alphanumeric characters (Mercosur plate max).
+  const handlePlateChange = (raw: string) => {
+    const next = normalizePlate(raw);
+    if (next.replace(/\s/g, '').length <= 7) setPlate(next);
+  };
+
   // Run the (mock) backend plate lookup, then let the store decide what's next.
   const handleSubmit = async () => {
     setChecking(true);
@@ -46,7 +52,7 @@ export function PlateForm() {
           placeholder="ABC 123"
           autoComplete="off"
           spellCheck={false}
-          onChange={(e) => setPlate(normalizePlate(e.target.value))}
+          onChange={(e) => handlePlateChange(e.target.value)}
         />
       </div>
 

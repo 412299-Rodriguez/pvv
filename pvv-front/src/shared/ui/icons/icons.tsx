@@ -133,10 +133,12 @@ export function DownloadIcon(props: IconProps) {
  */
 export function MercadoPagoMark({
   swooshColor = '#009ee3',
+  width = 24,
+  height = 24,
   ...props
 }: IconProps & { swooshColor?: string }) {
   return (
-    <svg viewBox="0 0 32 32" fill="none" {...props}>
+    <svg viewBox="0 0 32 32" fill="none" width={width} height={height} {...props}>
       <ellipse cx="16" cy="16" rx="13" ry="9" fill="#fff" />
       <path
         d="M9 17.5c2 1.8 4.5 1.8 6.5 .6 1.4-.8 2.4-.7 3.4.1.9.7 2 .5 2.6-.4"

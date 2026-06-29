@@ -117,3 +117,13 @@
   height: 48px;
   font-size: 15px;
 }
+
+@media (max-width: 480px) {
+  .modal {
+    padding: 24px 20px;
+  }
+  /* Stack the actions so the long "Continuar con esta fecha" label fits. */
+  .buttons {
+    flex-direction: column-reverse;
+  }
+}

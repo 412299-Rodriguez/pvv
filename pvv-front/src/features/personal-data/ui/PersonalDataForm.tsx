@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useSessionStore } from '@/entities/session';
 import type { Policyholder } from '@/entities/policyholder';
 import { Card, TextField, Button, MailIcon } from '@/shared/ui';
-import { isNonEmptyName, isValidEmail, isValidPhone } from '@/shared/lib';
+import { isNonEmptyName, isValidEmail, isValidPhone, digitsOnly } from '@/shared/lib';
 import styles from './PersonalDataForm.module.css';
 
 /** Per-field validation rules and their error copy. */
@@ -25,6 +25,7 @@ export function PersonalDataForm() {
   const policyholder = useSessionStore((s) => s.policyholder);
   const setField = useSessionStore((s) => s.setPolicyholderField);
   const submit = useSessionStore((s) => s.submitPersonalData);
+  const goBack = useSessionStore((s) => s.goBack);
 
   // Local UI concerns: which fields have been touched/edited and shown errors.
   const [showErrors, setShowErrors] = useState<FieldFlags>({});
@@ -95,6 +96,8 @@ export function PersonalDataForm() {
         <TextField
           id="email"
           label="Email *"
+          type="email"
+          inputMode="email"
           placeholder="tu@email.com"
           autoComplete="off"
           adornment={<MailIcon />}
@@ -111,17 +114,23 @@ export function PersonalDataForm() {
           inputMode="numeric"
           autoComplete="off"
           prefix="+54"
+          maxLength={14}
           value={policyholder.phone}
           prefilled={contactFound && !edited.phone}
           error={errorFor('phone')}
-          onChange={(e) => handleChange('phone')(e.target.value)}
+          onChange={(e) => handleChange('phone')(digitsOnly(e.target.value).slice(0, 14))}
           onBlur={handleBlur('phone')}
         />
       </div>
 
-      <Button variant="primary" fullWidth className={styles.cta} onClick={handleSubmit}>
-        Ver mi cotización →
-      </Button>
+      <div className={styles.actions}>
+        <Button variant="ghostBorder" onClick={goBack}>
+          ← Volver
+        </Button>
+        <Button variant="primary" className={styles.grow} onClick={handleSubmit}>
+          Ver mi cotización →
+        </Button>
+      </div>
     </Card>
   );
 }

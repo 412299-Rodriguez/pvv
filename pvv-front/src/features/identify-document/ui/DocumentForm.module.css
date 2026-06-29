@@ -33,12 +33,11 @@
   margin-bottom: 8px;
 }
 
-.linkRow {
-  text-align: center;
-  margin-top: 16px;
+/* Back + primary actions on one row (Volver next to Continuar). */
+.actions {
+  display: flex;
+  gap: 12px;
 }
-.linkRow a {
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
+.grow {
+  flex: 1;
 }
