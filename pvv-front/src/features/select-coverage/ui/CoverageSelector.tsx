@@ -4,6 +4,7 @@ import { useSessionStore } from '@/entities/session';
 import { CoverageCard, type Coverage } from '@/entities/coverage';
 import { getQuote } from '@/shared/api/ingress';
 import { ShieldIcon, Spinner } from '@/shared/ui';
+import { useText } from '@/entities/company';
 import styles from './CoverageSelector.module.css';
 
 /**
@@ -39,7 +40,7 @@ export function CoverageSelector() {
     <section>
       <h2 className={styles.secTitle}>
         <ShieldIcon />
-        Elegí tu cobertura
+        {useText('coverageTitle', 'Elegí tu cobertura')}
       </h2>
       {loading ? (
         <div className={styles.loading}>

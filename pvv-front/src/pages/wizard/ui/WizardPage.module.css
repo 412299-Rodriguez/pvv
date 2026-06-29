@@ -1,3 +1,23 @@
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px;
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.brandLogo {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+}
+.brandName {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
 .stage {
   max-width: 1040px;
   width: 100%;
@@ -27,26 +47,34 @@
   }
 }
 
-/* ---- Step 1: intro + plate ---------------------------------------------- */
-.twoCol {
+/* ---- Step 1: intro | plate, ads below ----------------------------------- */
+/* Mobile: plate, then ads, then intro. Desktop: intro | plate row, ads below. */
+.step1 {
   display: grid;
   grid-template-columns: 1fr;
+  grid-template-areas:
+    'plate'
+    'ads'
+    'intro';
   gap: 24px;
-  align-items: start;
   width: 100%;
 }
-/* Mobile: show the plate form first, the intro/benefits card below it. */
-.twoCol > *:last-child {
-  order: -1;
+.introArea {
+  grid-area: intro;
+}
+.plateArea {
+  grid-area: plate;
+}
+.adsArea {
+  grid-area: ads;
 }
 @media (min-width: 820px) {
-  .twoCol {
+  .step1 {
     grid-template-columns: 40fr 60fr;
-    gap: 32px;
-  }
-  /* Desktop: restore the intro | plate two-column order. */
-  .twoCol > *:last-child {
-    order: 0;
+    grid-template-areas:
+      'intro plate'
+      'ads ads';
+    column-gap: 32px;
   }
 }
 

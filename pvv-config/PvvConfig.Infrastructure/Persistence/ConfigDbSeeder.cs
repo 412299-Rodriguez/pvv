@@ -58,10 +58,35 @@ public static class ConfigDbSeeder
         {
             PrimaryColor = "#0071ce",
             SecondaryColor = "#003d7a",
-            LogoUrl = "",
+            LogoUrl = "https://dummyimage.com/160x48/0071ce/ffffff&text=Aseguradora",
             WelcomeText = "Cotizá tu seguro",
             FooterText = "Aseguradora Demo 2026",
-            CompanyDisplayName = "Demo"
+            CompanyDisplayName = "Aseguradora Demo",
+            Texts = new Dictionary<string, string>
+            {
+                ["introTitle"] = "Cotizá tu seguro en minutos",
+                ["introSubtitle"] = "100% digital, sin papeles, sin filas.",
+                ["feature1Title"] = "Emisión inmediata",
+                ["feature1Text"] = "Tu póliza en segundos",
+                ["feature2Title"] = "100% online",
+                ["feature2Text"] = "Sin turnos ni papeles",
+                ["feature3Title"] = "Pago seguro",
+                ["feature3Text"] = "Encriptado y protegido",
+                ["ratingText"] = "Miles de pólizas emitidas",
+                ["plateTitle"] = "Ingresá la patente",
+                ["plateSubtitle"] = "Validamos los datos al instante",
+                ["plateCta"] = "Cotizar mi seguro",
+                ["secureNote"] = "Tus datos están protegidos",
+                ["holderTitle"] = "¿Quién es el titular?",
+                ["holderSubtitle"] = "Ingresá tu documento para personalizar la cotización",
+                ["coverageTitle"] = "Elegí tu cobertura"
+            },
+            AdImages =
+            [
+                "https://dummyimage.com/800x200/0071ce/ffffff&text=Promo+1",
+                "https://dummyimage.com/800x200/003d7a/ffffff&text=Promo+2",
+                "https://dummyimage.com/800x200/00a0e9/ffffff&text=Promo+3"
+            ]
         };
 
         var product1 = Guid.NewGuid();

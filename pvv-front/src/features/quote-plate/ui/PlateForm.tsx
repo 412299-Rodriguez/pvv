@@ -3,6 +3,7 @@ import { useSessionStore, selectCanSubmitPlate } from '@/entities/session';
 import { checkPlate, IngressError } from '@/shared/api/ingress';
 import { Card, Button, Checkbox, CheckIcon, LockIcon } from '@/shared/ui';
 import { normalizePlate, isPlateValid } from '@/shared/lib';
+import { useText } from '@/entities/company';
 import styles from './PlateForm.module.css';
 
 /**
@@ -21,6 +22,11 @@ export function PlateForm() {
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const plateOk = isPlateValid(plate);
+
+  const plateTitle = useText('plateTitle', 'Ingresá la patente');
+  const plateSubtitle = useText('plateSubtitle', 'Validamos los datos al instante');
+  const plateCta = useText('plateCta', 'Cotizar mi seguro');
+  const secureNote = useText('secureNote', 'Tus datos están protegidos');
 
   // Normalize and cap at 7 alphanumeric characters (Mercosur plate max).
   const handlePlateChange = (raw: string) => {
@@ -48,8 +54,8 @@ export function PlateForm() {
 
   return (
     <Card>
-      <div className={styles.title}>Ingresá la patente</div>
-      <div className={styles.subtitle}>Validamos los datos al instante</div>
+      <div className={styles.title}>{plateTitle}</div>
+      <div className={styles.subtitle}>{plateSubtitle}</div>
 
       {/* License-plate styled input */}
       <div className={styles.plate}>
@@ -89,14 +95,14 @@ export function PlateForm() {
         disabled={!canSubmit || checking}
         onClick={handleSubmit}
       >
-        {checking ? 'Cotizando…' : 'Cotizar mi seguro →'}
+        {checking ? 'Cotizando…' : `${plateCta} →`}
       </Button>
 
       {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.secureNote}>
         <LockIcon />
-        Tus datos están protegidos
+        {secureNote}
       </div>
     </Card>
   );

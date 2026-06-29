@@ -1,27 +1,33 @@
 import { Card, BoltIcon, MobileIcon, LockIcon } from '@/shared/ui';
+import { useText } from '@/entities/company';
 import styles from './IntroPanel.module.css';
-
-interface Feature {
-  icon: typeof BoltIcon;
-  title: string;
-  description: string;
-}
-
-const FEATURES: Feature[] = [
-  { icon: BoltIcon, title: 'Emisión inmediata', description: 'Tu póliza en segundos' },
-  { icon: MobileIcon, title: '100% online', description: 'Sin turnos ni papeles' },
-  { icon: LockIcon, title: 'Pago seguro', description: 'Encriptado y protegido' },
-];
 
 /** Marketing / value-proposition panel shown beside the plate form on step 1. */
 export function IntroPanel() {
+  const introTitle = useText('introTitle', 'Cotizá tu seguro en minutos');
+  const introSubtitle = useText('introSubtitle', '100% digital, sin papeles, sin filas.');
+  const ratingText = useText('ratingText', 'Miles de pólizas emitidas');
+
+  const feature1Title = useText('feature1Title', 'Emisión inmediata');
+  const feature1Text = useText('feature1Text', 'Tu póliza en segundos');
+  const feature2Title = useText('feature2Title', '100% online');
+  const feature2Text = useText('feature2Text', 'Sin turnos ni papeles');
+  const feature3Title = useText('feature3Title', 'Pago seguro');
+  const feature3Text = useText('feature3Text', 'Encriptado y protegido');
+
+  const features = [
+    { icon: BoltIcon, title: feature1Title, description: feature1Text },
+    { icon: MobileIcon, title: feature2Title, description: feature2Text },
+    { icon: LockIcon, title: feature3Title, description: feature3Text },
+  ];
+
   return (
     <Card>
-      <h1 className={styles.title}>Cotizá tu seguro en minutos</h1>
-      <p className={styles.subtitle}>100% digital, sin papeles, sin filas.</p>
+      <h1 className={styles.title}>{introTitle}</h1>
+      <p className={styles.subtitle}>{introSubtitle}</p>
 
       <div className={styles.features}>
-        {FEATURES.map(({ icon: Icon, title, description }) => (
+        {features.map(({ icon: Icon, title, description }) => (
           <div key={title} className={styles.feature}>
             <span className={styles.featureIcon}>
               <Icon />
@@ -35,7 +41,7 @@ export function IntroPanel() {
       </div>
 
       <div className={styles.trust}>
-        <span className={styles.stars}>★★★★★</span> Miles de pólizas emitidas
+        <span className={styles.stars}>★★★★★</span> {ratingText}
       </div>
     </Card>
   );
