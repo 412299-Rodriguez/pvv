@@ -31,4 +31,29 @@ public class OperatorsController(IMediator mediator) : ControllerBase
     {
         return Ok(await mediator.Send(command, ct));
     }
+
+    /// <summary>Updates an operator (company, active flag, optional new password).</summary>
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType(typeof(OperatorDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateOperatorRequest request, CancellationToken ct)
+    {
+        var result = await mediator.Send(
+            new UpdateOperatorCommand(id, request.CompanyId, request.IsActive, request.Password), ct);
+        return Ok(result);
+    }
+
+    /// <summary>Deletes an operator.</summary>
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        var deleted = await mediator.Send(new DeleteOperatorCommand(id), ct);
+        return deleted
+            ? NoContent()
+            : Problem(detail: $"Operator '{id}' was not found.", statusCode: StatusCodes.Status404NotFound);
+    }
 }
+
+public record UpdateOperatorRequest(Guid CompanyId, bool IsActive, string? Password);

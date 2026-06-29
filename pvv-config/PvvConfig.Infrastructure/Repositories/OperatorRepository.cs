@@ -19,6 +19,26 @@ public class OperatorRepository(ConfigDbContext context) : IOperatorRepository
             .OrderBy(o => o.Username)
             .ToListAsync(ct);
 
+    public Task<Operator?> GetByIdAsync(Guid operatorId, CancellationToken ct) =>
+        context.Operators.FirstOrDefaultAsync(o => o.OperatorId == operatorId, ct);
+
     public async Task AddAsync(Operator op, CancellationToken ct) =>
         await context.Operators.AddAsync(op, ct);
+
+    public Task UpdateAsync(Operator op, CancellationToken ct)
+    {
+        context.Operators.Update(op);
+        return Task.CompletedTask;
+    }
+
+    public async Task<bool> DeleteAsync(Guid operatorId, CancellationToken ct)
+    {
+        var op = await context.Operators.FirstOrDefaultAsync(o => o.OperatorId == operatorId, ct);
+        if (op is null)
+        {
+            return false;
+        }
+        context.Operators.Remove(op);
+        return true;
+    }
 }

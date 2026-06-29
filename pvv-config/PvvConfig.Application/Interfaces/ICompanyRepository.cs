@@ -10,4 +10,7 @@ public interface ICompanyRepository
     Task<bool> ExistsByCuitAsync(string cuit, CancellationToken ct);
     Task AddAsync(Company company, CancellationToken ct);
     Task UpdateAsync(Company company, CancellationToken ct);
+
+    /// <summary>Deletes a company and its configurations, history and operators. False if not found.</summary>
+    Task<bool> DeleteAsync(Guid companyId, CancellationToken ct);
 }

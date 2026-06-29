@@ -1,6 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
-import { createOperator, listOperators, type OperatorSummary } from '@/entities/operator'
+import {
+  createOperator,
+  deleteOperator,
+  listOperators,
+  updateOperator,
+  type OperatorSummary,
+} from '@/entities/operator'
 import { listCompanies, type Company } from '@/entities/company'
 import { Button, Card, Field, inputClass } from '@/shared/ui'
 
@@ -8,12 +14,17 @@ export function OperatorsPage() {
   const [operators, setOperators] = useState<OperatorSummary[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [companyId, setCompanyId] = useState('')
   const [creating, setCreating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editCompanyId, setEditCompanyId] = useState('')
+  const [editActive, setEditActive] = useState(true)
+  const [editPassword, setEditPassword] = useState('')
 
   const load = () => {
     setLoading(true)
@@ -47,6 +58,41 @@ export function OperatorsPage() {
     }
   }
 
+  const startEdit = (op: OperatorSummary) => {
+    setEditingId(op.operatorId)
+    setEditCompanyId(op.companyId ?? companies[0]?.companyId ?? '')
+    setEditActive(op.isActive)
+    setEditPassword('')
+  }
+
+  const saveEdit = async () => {
+    if (!editingId) return
+    setError(null)
+    try {
+      await updateOperator(editingId, {
+        companyId: editCompanyId,
+        isActive: editActive,
+        password: editPassword,
+      })
+      setEditingId(null)
+      load()
+    } catch {
+      setError('No se pudo guardar el operador.')
+    }
+  }
+
+  const remove = async (op: OperatorSummary) => {
+    if (!window.confirm(`¿Borrar al operador "${op.username}"?`)) return
+    setError(null)
+    try {
+      await deleteOperator(op.operatorId)
+      load()
+    } catch {
+      setError('No se pudo borrar el operador.')
+    }
+  }
+
+  // Only company operators are editable here (the SystemAdmin row is read-only).
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-slate-800">Operadores</h1>
@@ -91,8 +137,9 @@ export function OperatorsPage() {
             {creating ? 'Creando…' : 'Crear operador'}
           </Button>
         </form>
-        {error && <p className="mt-2 text-sm font-medium text-red-600">{error}</p>}
       </Card>
+
+      {error && <p className="text-sm font-medium text-red-600">{error}</p>}
 
       <Card>
         {loading ? (
@@ -105,27 +152,88 @@ export function OperatorsPage() {
                 <th className="py-2">Compañía</th>
                 <th className="py-2">Rol</th>
                 <th className="py-2">Estado</th>
+                <th className="py-2 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {operators.map((op) => (
-                <tr key={op.operatorId} className="border-b border-slate-100">
-                  <td className="py-3 font-semibold text-slate-800">{op.username}</td>
-                  <td className="py-3 text-slate-600">{op.companyName ?? '—'}</td>
-                  <td className="py-3 text-slate-600">
-                    {op.role === 'SystemAdmin' ? 'Administrador' : 'Operador'}
-                  </td>
-                  <td className="py-3">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        op.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
-                      }`}
-                    >
-                      {op.isActive ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {operators.map((op) => {
+                const isAdmin = op.role === 'SystemAdmin'
+                if (editingId === op.operatorId) {
+                  return (
+                    <tr key={op.operatorId} className="border-b border-slate-100 bg-slate-50">
+                      <td className="py-2 pr-2 font-semibold text-slate-800">{op.username}</td>
+                      <td className="py-2 pr-2">
+                        <select
+                          value={editCompanyId}
+                          onChange={(e) => setEditCompanyId(e.target.value)}
+                          className={inputClass}
+                        >
+                          {companies.map((c) => (
+                            <option key={c.companyId} value={c.companyId}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="py-2 pr-2">
+                        <input
+                          type="password"
+                          value={editPassword}
+                          onChange={(e) => setEditPassword(e.target.value)}
+                          className={inputClass}
+                          placeholder="Nueva contraseña (opcional)"
+                        />
+                      </td>
+                      <td className="py-2">
+                        <label className="flex items-center gap-2 text-sm text-slate-700">
+                          <input type="checkbox" checked={editActive} onChange={(e) => setEditActive(e.target.checked)} />
+                          Activo
+                        </label>
+                      </td>
+                      <td className="py-2 text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button onClick={saveEdit}>Guardar</Button>
+                          <Button variant="secondary" onClick={() => setEditingId(null)}>
+                            Cancelar
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                }
+                return (
+                  <tr key={op.operatorId} className="border-b border-slate-100">
+                    <td className="py-3 font-semibold text-slate-800">{op.username}</td>
+                    <td className="py-3 text-slate-600">{op.companyName ?? '—'}</td>
+                    <td className="py-3 text-slate-600">{isAdmin ? 'Administrador' : 'Operador'}</td>
+                    <td className="py-3">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          op.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        {op.isActive ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </td>
+                    <td className="py-3">
+                      <div className="flex items-center justify-end gap-3">
+                        {isAdmin ? (
+                          <span className="text-xs text-slate-400">—</span>
+                        ) : (
+                          <>
+                            <Button variant="secondary" onClick={() => startEdit(op)}>
+                              Editar
+                            </Button>
+                            <Button variant="danger" onClick={() => remove(op)}>
+                              Borrar
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}

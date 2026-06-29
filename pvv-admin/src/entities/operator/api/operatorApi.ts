@@ -21,3 +21,17 @@ export async function createOperator(
   })
   return data
 }
+
+/** Updates an operator (company, active flag; password only if non-empty). */
+export async function updateOperator(
+  id: string,
+  changes: { companyId: string; isActive: boolean; password: string },
+): Promise<OperatorSummary> {
+  const { data } = await axiosInstance.put<OperatorSummary>(`/api/operators/${id}`, changes)
+  return data
+}
+
+/** Deletes an operator. */
+export async function deleteOperator(id: string): Promise<void> {
+  await axiosInstance.delete(`/api/operators/${id}`)
+}

@@ -64,6 +64,21 @@ public class CompaniesController(IMediator mediator) : ControllerBase
             new UpdateCompanyCommand(id, request.Name, request.CUIT, request.IsActive), ct);
         return Ok(result);
     }
+
+    /// <summary>Deletes a company and all its configurations and operators.</summary>
+    /// <response code="204">The company was deleted.</response>
+    /// <response code="404">No company exists with that id.</response>
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = nameof(OperatorRole.SystemAdmin))]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        var deleted = await mediator.Send(new DeleteCompanyCommand(id), ct);
+        return deleted
+            ? NoContent()
+            : Problem(detail: $"Company '{id}' was not found.", statusCode: StatusCodes.Status404NotFound);
+    }
 }
 
 public record UpdateCompanyRequest(string Name, string CUIT, bool IsActive);

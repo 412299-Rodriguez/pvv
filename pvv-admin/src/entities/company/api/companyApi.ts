@@ -19,3 +19,17 @@ export async function createCompany(name: string, cuit: string): Promise<Company
   const { data } = await axiosInstance.post<Company>('/api/companies', { name, cuit })
   return data
 }
+
+/** Updates a company's editable fields. */
+export async function updateCompany(
+  id: string,
+  changes: { name: string; cuit: string; isActive: boolean },
+): Promise<Company> {
+  const { data } = await axiosInstance.put<Company>(`/api/companies/${id}`, changes)
+  return data
+}
+
+/** Deletes a company (and its configs + operators). */
+export async function deleteCompany(id: string): Promise<void> {
+  await axiosInstance.delete(`/api/companies/${id}`)
+}
