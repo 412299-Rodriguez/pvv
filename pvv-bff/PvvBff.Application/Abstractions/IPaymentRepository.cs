@@ -10,4 +10,10 @@ public interface IPaymentRepository
     Task<PaymentTransaction?> GetAsync(string id, CancellationToken ct);
 
     Task UpdateAsync(PaymentTransaction transaction, CancellationToken ct);
+
+    /// <summary>
+    /// Marks every still-Pending transaction created before <paramref name="olderThan"/>
+    /// as Abandoned. Returns how many were updated.
+    /// </summary>
+    Task<long> MarkAbandonedAsync(DateTime olderThan, CancellationToken ct);
 }

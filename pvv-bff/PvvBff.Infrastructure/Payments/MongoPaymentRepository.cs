@@ -22,4 +22,15 @@ public sealed class MongoPaymentRepository : IPaymentRepository
 
     public Task UpdateAsync(PaymentTransaction transaction, CancellationToken ct) =>
         _collection.ReplaceOneAsync(t => t.Id == transaction.Id, transaction, cancellationToken: ct);
+
+    public async Task<long> MarkAbandonedAsync(DateTime olderThan, CancellationToken ct)
+    {
+        var filter = Builders<PaymentTransaction>.Filter.And(
+            Builders<PaymentTransaction>.Filter.Eq(t => t.Status, PaymentStatus.Pending),
+            Builders<PaymentTransaction>.Filter.Lt(t => t.CreatedAt, olderThan));
+        var update = Builders<PaymentTransaction>.Update.Set(t => t.Status, PaymentStatus.Abandoned);
+
+        var result = await _collection.UpdateManyAsync(filter, update, cancellationToken: ct);
+        return result.ModifiedCount;
+    }
 }

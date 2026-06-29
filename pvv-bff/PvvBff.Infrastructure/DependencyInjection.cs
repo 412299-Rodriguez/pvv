@@ -40,6 +40,7 @@ public static class DependencyInjection
             services.AddSingleton(sp =>
                 sp.GetRequiredService<IMongoClient>().GetDatabase("pvv_bff_db"));
             services.AddScoped<IPaymentRepository, MongoPaymentRepository>();
+            services.AddHostedService<AbandonmentDetectionJob>();
         }
 
         // Ingress (HU-06) — route store, in-process proxy, company-config reader,
