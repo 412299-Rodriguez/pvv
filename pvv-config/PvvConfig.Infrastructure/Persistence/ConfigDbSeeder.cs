@@ -86,6 +86,48 @@ public static class ConfigDbSeeder
                 "https://dummyimage.com/800x200/0071ce/ffffff&text=Promo+1",
                 "https://dummyimage.com/800x200/003d7a/ffffff&text=Promo+2",
                 "https://dummyimage.com/800x200/00a0e9/ffffff&text=Promo+3"
+            ],
+            TermsText =
+                "Estos términos definen los derechos del usuario, las restricciones de uso y las " +
+                "políticas de privacidad, protegiendo tanto a la plataforma como a su cuenta. Al " +
+                "aceptar estos términos estás validando lo siguiente:\n\n" +
+                "• Consentimiento informado: el usuario acepta cómo se recopilan y tratan sus datos " +
+                "personales (Política de Privacidad).\n" +
+                "• Uso responsable: se compromete a no realizar actividades maliciosas (hackeo, spam, " +
+                "suplantación de identidad).\n" +
+                "• Seguridad de la cuenta: la aseguradora asume la responsabilidad de proteger los " +
+                "datos del usuario y cualquier acción realizada bajo su sesión.\n" +
+                "• Propiedad intelectual: el usuario reconoce los derechos de autor sobre el contenido, " +
+                "diseño y código de la plataforma.",
+            PrivacyText =
+                "En Aseguradora Demo protegemos tus datos personales. Solo recopilamos la información " +
+                "necesaria para cotizar y emitir tu póliza (patente, documento y datos de contacto), y " +
+                "la tratamos de forma confidencial.\n\n" +
+                "• No compartimos tus datos con terceros ajenos a la emisión del seguro.\n" +
+                "• Tus datos viajan encriptados de extremo a extremo.\n" +
+                "• Podés solicitar la baja o rectificación de tus datos cuando quieras.",
+            Faqs =
+            [
+                new FaqItemDto
+                {
+                    Question = "¿Cómo cotizo mi seguro?",
+                    Answer = "Ingresá la patente de tu vehículo y en segundos te mostramos las coberturas disponibles."
+                },
+                new FaqItemDto
+                {
+                    Question = "¿La póliza se emite al instante?",
+                    Answer = "Sí, una vez confirmado el pago la póliza se emite automáticamente y la ves en pantalla."
+                },
+                new FaqItemDto
+                {
+                    Question = "¿Qué medios de pago aceptan?",
+                    Answer = "Pagás de forma segura con Mercado Pago: tarjeta de crédito, débito o dinero en cuenta."
+                },
+                new FaqItemDto
+                {
+                    Question = "¿Mis datos están protegidos?",
+                    Answer = "Sí, tus datos viajan encriptados y solo se usan para emitir tu póliza."
+                }
             ]
         };
 

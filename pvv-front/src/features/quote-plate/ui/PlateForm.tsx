@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useSessionStore, selectCanSubmitPlate } from '@/entities/session';
 import { checkPlate, IngressError } from '@/shared/api/ingress';
 import { Card, Button, Checkbox, CheckIcon, LockIcon } from '@/shared/ui';
-import { normalizePlate, isPlateValid } from '@/shared/lib';
+import { normalizePlate, isPlateValid, useInfoModalStore } from '@/shared/lib';
 import { useText } from '@/entities/company';
 import styles from './PlateForm.module.css';
 
@@ -27,6 +27,7 @@ export function PlateForm() {
   const plateSubtitle = useText('plateSubtitle', 'Validamos los datos al instante');
   const plateCta = useText('plateCta', 'Cotizar mi seguro');
   const secureNote = useText('secureNote', 'Tus datos están protegidos');
+  const openModal = useInfoModalStore((s) => s.openModal);
 
   // Normalize and cap at 7 alphanumeric characters (Mercosur plate max).
   const handlePlateChange = (raw: string) => {
@@ -73,11 +74,25 @@ export function PlateForm() {
       <div className={styles.terms}>
         <Checkbox checked={termsAccepted} onChange={toggleTerms}>
           Acepto los{' '}
-          <a href="#" onClick={(e) => e.preventDefault()}>
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              openModal('terms');
+            }}
+          >
             Términos y Condiciones
           </a>{' '}
           y la{' '}
-          <a href="#" onClick={(e) => e.preventDefault()}>
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              openModal('privacy');
+            }}
+          >
             Política de Privacidad
           </a>
         </Checkbox>

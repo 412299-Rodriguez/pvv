@@ -1,10 +1,12 @@
 import { useSessionStore } from '@/entities/session';
 import { usePvvConfigStore } from '@/entities/company';
 import { VehicleCard } from '@/entities/vehicle';
+import { useInfoModalStore } from '@/shared/lib';
 
 import { Stepper } from '@/widgets/stepper';
 import { PurchaseSummary } from '@/widgets/purchase-summary';
 import { AdCarousel } from '@/widgets/ad-carousel';
+import { InfoModals } from '@/widgets/info-modals';
 
 import { PlateForm } from '@/features/quote-plate';
 import { DocumentForm } from '@/features/identify-document';
@@ -29,6 +31,8 @@ export function WizardPage() {
   const goBack = useSessionStore((s) => s.goBack);
 
   const adImages = usePvvConfigStore((s) => s.adImages);
+  const footerText = usePvvConfigStore((s) => s.footerText);
+  const openModal = useInfoModalStore((s) => s.openModal);
 
   const showTopBack = step === 'checkout';
 
@@ -85,7 +89,15 @@ export function WizardPage() {
         </div>
       </main>
 
+      <footer className={styles.footer}>
+        <button type="button" className={styles.faqLink} onClick={() => openModal('faq')}>
+          Preguntas frecuentes
+        </button>
+        {footerText && <span className={styles.footerText}>{footerText}</span>}
+      </footer>
+
       <RenewPolicyModal />
+      <InfoModals />
     </>
   );
 }

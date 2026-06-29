@@ -5,24 +5,35 @@ import { ingressRequest } from '@/shared/api';
 /** Bootstrap status of the tenant: still loading, valid, or not a real portal. */
 export type CompanyStatus = 'loading' | 'ready' | 'invalid';
 
+export interface FaqItem {
+  question: string;
+  answer: string;
+}
+
 /** Backend UI config blob (PascalCase), served by pvv-config as PVV_UI_CONFIG. */
 interface UiConfigDto {
   PrimaryColor?: string;
   SecondaryColor?: string;
   LogoUrl?: string;
   CompanyDisplayName?: string;
+  FooterText?: string;
   Texts?: Record<string, string>;
   AdImages?: string[];
+  TermsText?: string;
+  PrivacyText?: string;
+  Faqs?: { Question?: string; Answer?: string }[];
 }
 
 interface PvvConfigState {
   status: CompanyStatus;
   companyName: string;
   logoUrl: string | null;
-  /** Per-screen copy overrides, keyed by id (see useText). */
+  footerText: string;
   texts: Record<string, string>;
-  /** Public image URLs for the step-1 ad carousel. */
   adImages: string[];
+  termsText: string;
+  privacyText: string;
+  faqs: FaqItem[];
   loadAndApply: () => Promise<void>;
   markInvalid: () => void;
 }
@@ -45,8 +56,12 @@ export const usePvvConfigStore = create<PvvConfigState>((set) => ({
   status: 'loading',
   companyName: '',
   logoUrl: null,
+  footerText: '',
   texts: {},
   adImages: [],
+  termsText: '',
+  privacyText: '',
+  faqs: [],
 
   markInvalid: () => set({ status: 'invalid' }),
 
@@ -58,8 +73,12 @@ export const usePvvConfigStore = create<PvvConfigState>((set) => ({
         status: 'ready',
         companyName: dto.CompanyDisplayName ?? '',
         logoUrl: dto.LogoUrl ? dto.LogoUrl : null,
+        footerText: dto.FooterText ?? '',
         texts: dto.Texts ?? {},
         adImages: dto.AdImages ?? [],
+        termsText: dto.TermsText ?? '',
+        privacyText: dto.PrivacyText ?? '',
+        faqs: (dto.Faqs ?? []).map((f) => ({ question: f.Question ?? '', answer: f.Answer ?? '' })),
       });
     } catch {
       // No valid company config → not a real point of sale.
