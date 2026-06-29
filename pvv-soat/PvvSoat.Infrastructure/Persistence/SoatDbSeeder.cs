@@ -87,7 +87,28 @@ public static class SoatDbSeeder
             VehicleType = VehicleType.Car,
             CreatedAt = now
         };
-        context.Vehicles.AddRange(corolla, amarok, titan, focus, onix, sandero);
+        // One un-insured plate of each remaining type, to test per-type pricing.
+        var ranger = new Vehicle
+        {
+            VehicleId = Guid.NewGuid(),
+            Plate = "TJK220",
+            Brand = "Ford",
+            Model = "Ranger",
+            Year = 2021,
+            VehicleType = VehicleType.Truck,
+            CreatedAt = now
+        };
+        var kangoo = new Vehicle
+        {
+            VehicleId = Guid.NewGuid(),
+            Plate = "VTR550",
+            Brand = "Renault",
+            Model = "Kangoo",
+            Year = 2020,
+            VehicleType = VehicleType.Van,
+            CreatedAt = now
+        };
+        context.Vehicles.AddRange(corolla, amarok, titan, focus, onix, sandero, ranger, kangoo);
 
         var juan = new Holder
         {

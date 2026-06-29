@@ -155,8 +155,8 @@ public static class ConfigDbSeeder
             ]
         };
 
-        var product1 = Guid.NewGuid();
-        var product2 = Guid.NewGuid();
+        var product1 = new Guid("22222222-2222-2222-2222-222222222222");
+        var product2 = new Guid("33333333-3333-3333-3333-333333333333");
 
         var productConfig = new ProductConfigValueDto
         {
@@ -181,28 +181,19 @@ public static class ConfigDbSeeder
             ]
         };
 
+        // A price per product AND vehicle type, so the quote changes by type.
         var pricingConfig = new PricingConfigValueDto
         {
             Rules =
             [
-                new PricingItemDto
-                {
-                    PricingId = Guid.NewGuid(),
-                    ProductId = product1,
-                    VehicleType = "Car",
-                    YearFrom = 2010,
-                    YearTo = 2026,
-                    Price = 15000m
-                },
-                new PricingItemDto
-                {
-                    PricingId = Guid.NewGuid(),
-                    ProductId = product2,
-                    VehicleType = "Car",
-                    YearFrom = 2010,
-                    YearTo = 2026,
-                    Price = 28000m
-                }
+                new() { PricingId = Guid.NewGuid(), ProductId = product1, VehicleType = "Car",        YearFrom = 2000, YearTo = 2030, Price = 15000m },
+                new() { PricingId = Guid.NewGuid(), ProductId = product1, VehicleType = "Motorcycle", YearFrom = 2000, YearTo = 2030, Price = 8000m },
+                new() { PricingId = Guid.NewGuid(), ProductId = product1, VehicleType = "Truck",      YearFrom = 2000, YearTo = 2030, Price = 22000m },
+                new() { PricingId = Guid.NewGuid(), ProductId = product1, VehicleType = "Van",        YearFrom = 2000, YearTo = 2030, Price = 18000m },
+                new() { PricingId = Guid.NewGuid(), ProductId = product2, VehicleType = "Car",        YearFrom = 2000, YearTo = 2030, Price = 28000m },
+                new() { PricingId = Guid.NewGuid(), ProductId = product2, VehicleType = "Motorcycle", YearFrom = 2000, YearTo = 2030, Price = 14000m },
+                new() { PricingId = Guid.NewGuid(), ProductId = product2, VehicleType = "Truck",      YearFrom = 2000, YearTo = 2030, Price = 40000m },
+                new() { PricingId = Guid.NewGuid(), ProductId = product2, VehicleType = "Van",        YearFrom = 2000, YearTo = 2030, Price = 33000m }
             ]
         };
 
