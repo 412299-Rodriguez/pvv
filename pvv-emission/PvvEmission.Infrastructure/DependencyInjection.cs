@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
+using PvvEmission.Application.Emission;
+using PvvEmission.Infrastructure.Emission;
 using RabbitMQ.Client;
 
 namespace PvvEmission.Infrastructure;
@@ -21,7 +23,13 @@ public static class DependencyInjection
             services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoConnectionString));
             services.AddSingleton(sp =>
                 sp.GetRequiredService<IMongoClient>().GetDatabase("pvv_bff_db"));
+            services.AddScoped<IEmissionStatusStore, MongoEmissionStatusStore>();
         }
+
+        // pvv-soat client used to emit policies (typed HttpClient).
+        var soatBaseUrl = configuration["PvvSoatApi:BaseUrl"] ?? "http://localhost:5001";
+        services.AddHttpClient<IPolicyEmitter, SoatPolicyEmitter>(client =>
+            client.BaseAddress = new Uri(soatBaseUrl));
 
         // RabbitMQ — connection factory for the emission queue consumer.
         // The connection itself is opened by the consumer in Sprint 1.
