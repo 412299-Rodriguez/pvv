@@ -7,12 +7,15 @@ using PvvConfig.Infrastructure.Settings;
 namespace PvvConfig.Infrastructure.Services;
 
 /// <summary>
-/// AES-256-CBC encryption. A random IV is generated per call and prepended to the
-/// ciphertext; the result is URL-safe base64.
+/// AES-256-CBC encryption. DETERMINISTIC: the key AND IV are fixed (from config),
+/// so encrypting the same value always yields the same token. This keeps each
+/// company's hashed id (the public portal `?c=` token) stable across reseeds.
+/// The IV is still prepended to the ciphertext; the result is URL-safe base64.
 /// </summary>
 public class AesEncryptionService : IEncryptionService
 {
     private readonly byte[] _key;
+    private readonly byte[] _iv;
 
     public AesEncryptionService(IOptions<EncryptionSettings> options)
     {
@@ -22,13 +25,21 @@ public class AesEncryptionService : IEncryptionService
             throw new InvalidOperationException(
                 "EncryptionSettings:Key must be exactly 32 bytes (256 bits).");
         }
+
+        // Fixed IV from config → deterministic, stable tokens.
+        _iv = Encoding.UTF8.GetBytes(options.Value.Iv);
+        if (_iv.Length != 16)
+        {
+            throw new InvalidOperationException(
+                "EncryptionSettings:Iv must be exactly 16 bytes (128 bits).");
+        }
     }
 
     public string Encrypt(string plainText)
     {
         using var aes = Aes.Create();
         aes.Key = _key;
-        aes.GenerateIV();
+        aes.IV = _iv;
 
         using var encryptor = aes.CreateEncryptor();
         var plainBytes = Encoding.UTF8.GetBytes(plainText);

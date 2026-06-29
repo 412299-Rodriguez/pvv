@@ -10,11 +10,16 @@ using PvvConfig.Domain.Enums;
 namespace PvvConfig.Infrastructure.Persistence;
 
 /// <summary>
-/// Seeds example data for local development only. Runs when the environment is
-/// Development and the Companies table is empty.
+/// Seeds development data. The system admin is ensured on every startup; the demo
+/// company is seeded once with a FIXED id (so its hashed portal token is stable
+/// across reseeds) and is never recreated if it already exists, so companies
+/// created from pvv-admin persist.
 /// </summary>
 public static class ConfigDbSeeder
 {
+    // Fixed id → with deterministic encryption, a stable `?c=` portal token forever.
+    private static readonly Guid DemoCompanyId = new("11111111-1111-1111-1111-111111111111");
+
     public static async Task SeedAsync(
         ConfigDbContext context,
         IEncryptionService encryption,
@@ -27,18 +32,35 @@ public static class ConfigDbSeeder
             return;
         }
 
-        if (await context.Companies.AnyAsync(ct))
+        var now = DateTime.UtcNow;
+
+        // 1. Ensure the system administrator always exists (independent of companies).
+        if (!await context.Operators.AnyAsync(o => o.Username == "superadmin@pvv.com", ct))
+        {
+            context.Operators.Add(new Operator
+            {
+                OperatorId = Guid.NewGuid(),
+                CompanyId = null,
+                Username = "superadmin@pvv.com",
+                PasswordHash = passwordHasher.Hash("Super123!"),
+                Role = OperatorRole.SystemAdmin,
+                IsActive = true,
+                CreatedAt = now,
+            });
+            await context.SaveChangesAsync(ct);
+        }
+
+        // 2. Seed the demo company once. If it already exists we stop here, so
+        //    companies created from the admin (and any edits) are preserved.
+        if (await context.Companies.AnyAsync(c => c.CompanyId == DemoCompanyId, ct))
         {
             return;
         }
 
-        var now = DateTime.UtcNow;
-        var companyId = Guid.NewGuid();
-
         var company = new Company
         {
-            CompanyId = companyId,
-            HashedCompanyId = encryption.Encrypt(companyId.ToString()),
+            CompanyId = DemoCompanyId,
+            HashedCompanyId = encryption.Encrypt(DemoCompanyId.ToString()),
             Name = "Aseguradora Demo",
             CUIT = "30-12345678-9",
             IsActive = true,
@@ -48,22 +70,10 @@ public static class ConfigDbSeeder
         var op = new Operator
         {
             OperatorId = Guid.NewGuid(),
-            CompanyId = companyId,
+            CompanyId = DemoCompanyId,
             Username = "admin@demo.com",
             PasswordHash = passwordHasher.Hash("Demo123!"),
             Role = OperatorRole.CompanyOperator,
-            IsActive = true,
-            CreatedAt = now
-        };
-
-        // System administrator: manages every company (has no company of its own).
-        var systemAdmin = new Operator
-        {
-            OperatorId = Guid.NewGuid(),
-            CompanyId = null,
-            Username = "superadmin@pvv.com",
-            PasswordHash = passwordHasher.Hash("Super123!"),
-            Role = OperatorRole.SystemAdmin,
             IsActive = true,
             CreatedAt = now
         };
@@ -198,11 +208,10 @@ public static class ConfigDbSeeder
 
         context.Companies.Add(company);
         context.Operators.Add(op);
-        context.Operators.Add(systemAdmin);
         context.Configurations.AddRange(
-            BuildConfiguration(companyId, ConfigurationTypes.PVV_UI_CONFIG, uiConfig, now),
-            BuildConfiguration(companyId, ConfigurationTypes.PRODUCT_CONFIG, productConfig, now),
-            BuildConfiguration(companyId, ConfigurationTypes.PRICING_CONFIG, pricingConfig, now));
+            BuildConfiguration(DemoCompanyId, ConfigurationTypes.PVV_UI_CONFIG, uiConfig, now),
+            BuildConfiguration(DemoCompanyId, ConfigurationTypes.PRODUCT_CONFIG, productConfig, now),
+            BuildConfiguration(DemoCompanyId, ConfigurationTypes.PRICING_CONFIG, pricingConfig, now));
 
         await context.SaveChangesAsync(ct);
     }
