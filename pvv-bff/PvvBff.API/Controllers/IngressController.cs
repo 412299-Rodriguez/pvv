@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using PvvBff.API.Middleware;
 using PvvBff.API.Models;
 using PvvBff.Application.Ingress;
 
@@ -12,6 +14,7 @@ namespace PvvBff.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/ingress")]
+[EnableRateLimiting("ingress")]
 public sealed class IngressController : ControllerBase
 {
     private readonly ISender _mediator;
@@ -22,10 +25,9 @@ public sealed class IngressController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Proxy([FromBody] IngressHttpRequest request, CancellationToken ct)
     {
-        // Until the session middleware (6B) lands, read identity straight from the
-        // headers the frontend sends.
-        var companyToken = Request.Headers["X-Company-Token"].FirstOrDefault();
-        var sessionId = Request.Headers["X-Session-Id"].FirstOrDefault();
+        // Identity is resolved by the session middleware and stashed in Items.
+        var companyToken = HttpContext.Items[SessionMiddleware.CompanyItemKey] as string;
+        var sessionId = HttpContext.Items[SessionMiddleware.SessionItemKey] as string;
 
         var result = await _mediator.Send(
             new ProxyRequestCommand(
