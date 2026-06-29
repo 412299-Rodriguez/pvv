@@ -56,7 +56,38 @@ public static class SoatDbSeeder
             VehicleType = VehicleType.Motorcycle,
             CreatedAt = now
         };
-        context.Vehicles.AddRange(corolla, amarok, titan);
+        // Extra Car plates with no policy → ready for the normal purchase flow.
+        var focus = new Vehicle
+        {
+            VehicleId = Guid.NewGuid(),
+            Plate = "MDJ345",
+            Brand = "Ford",
+            Model = "Focus",
+            Year = 2020,
+            VehicleType = VehicleType.Car,
+            CreatedAt = now
+        };
+        var onix = new Vehicle
+        {
+            VehicleId = Guid.NewGuid(),
+            Plate = "LRP782",
+            Brand = "Chevrolet",
+            Model = "Onix",
+            Year = 2022,
+            VehicleType = VehicleType.Car,
+            CreatedAt = now
+        };
+        var sandero = new Vehicle
+        {
+            VehicleId = Guid.NewGuid(),
+            Plate = "KQB910",
+            Brand = "Renault",
+            Model = "Sandero",
+            Year = 2018,
+            VehicleType = VehicleType.Car,
+            CreatedAt = now
+        };
+        context.Vehicles.AddRange(corolla, amarok, titan, focus, onix, sandero);
 
         var juan = new Holder
         {
