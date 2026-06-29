@@ -78,6 +78,10 @@ public sealed class SessionMiddleware
         if (!string.IsNullOrWhiteSpace(companyToken))
             context.Items[CompanyItemKey] = companyToken;
 
+        // Return the (server-generated) session id so the SPA can persist it and
+        // echo it back — the cross-origin path the cookie can't cover over http.
+        context.Response.Headers["X-Session-Id"] = sessionId;
+
         context.Response.Cookies.Append(_options.CookieName, sessionId, new CookieOptions
         {
             HttpOnly = true,

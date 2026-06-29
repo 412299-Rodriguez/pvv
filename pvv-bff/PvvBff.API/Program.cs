@@ -53,7 +53,8 @@ builder.Services.AddCors(options => options.AddPolicy("pvv-spa", policy => polic
     .WithOrigins(corsOrigins)
     .AllowAnyHeader()
     .AllowAnyMethod()
-    .AllowCredentials()));
+    .AllowCredentials()
+    .WithExposedHeaders("X-Session-Id")));
 
 // Security / session middleware options.
 builder.Services.Configure<TurnstileOptions>(

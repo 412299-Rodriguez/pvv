@@ -1,3 +1,4 @@
+export { ingressRequest, IngressError } from './ingressRequest';
 export {
   checkPlate,
   lookupHolder,

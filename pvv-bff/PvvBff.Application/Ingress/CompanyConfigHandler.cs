@@ -39,6 +39,6 @@ public sealed class CompanyConfigHandler : IInternalIngressHandler
             return value.GetString()!;
         }
 
-        return "UI"; // sensible default section for the portal
+        return "PVV_UI_CONFIG"; // default section for the portal appearance
     }
 }

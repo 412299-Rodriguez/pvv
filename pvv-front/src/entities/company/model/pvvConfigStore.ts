@@ -1,30 +1,64 @@
 import { create } from 'zustand';
 
-/**
- * Dynamic appearance / theming config — RESERVED for HU-10.
- *
- * Each company customises its portal (colors, logo, texts) from pvv-admin; that
- * config is stored in pvv-config and served through the BFF. HU-10 fetches it at
- * app start and applies it by injecting CSS custom properties on :root — the
- * base CSS-var theme already lives in `app/styles/tokens.css`, so theming is an
- * override, not a rewrite. Not wired yet.
- */
+import { ingressRequest } from '@/shared/api';
+
+/** The appearance the portal applies for the current company. */
 export interface AppearanceConfig {
-  /** Overrides `--color-primary`; null = use the token default. */
   primaryColor: string | null;
+  secondaryColor: string | null;
   logoUrl: string | null;
-  /** Per-screen copy overrides, keyed by a stable text id. */
+  /** Per-screen copy (welcome / footer / companyName). */
   texts: Record<string, string>;
 }
 
+/** Backend UI config blob (PascalCase), served by pvv-config as PVV_UI_CONFIG. */
+interface UiConfigDto {
+  PrimaryColor?: string;
+  SecondaryColor?: string;
+  LogoUrl?: string;
+  WelcomeText?: string;
+  FooterText?: string;
+  CompanyDisplayName?: string;
+}
+
 interface PvvConfigState extends AppearanceConfig {
-  applyAppearance: (config: AppearanceConfig) => void;
+  loaded: boolean;
+  /** Fetch the company's UI config via the ingress and apply it as the theme. */
+  loadAndApply: () => Promise<void>;
+}
+
+/** Inject the company colors as CSS custom properties on :root. */
+function applyCssVariables(appearance: AppearanceConfig): void {
+  const root = document.documentElement;
+  if (appearance.primaryColor) {
+    root.style.setProperty('--color-primary', appearance.primaryColor);
+    root.style.setProperty('--color-primary-hover', appearance.primaryColor);
+  }
+  if (appearance.secondaryColor) {
+    root.style.setProperty('--color-secondary', appearance.secondaryColor);
+  }
 }
 
 export const usePvvConfigStore = create<PvvConfigState>((set) => ({
   primaryColor: null,
+  secondaryColor: null,
   logoUrl: null,
   texts: {},
-  // TODO HU-10: besides storing it, inject the CSS vars on document.documentElement.
-  applyAppearance: (config) => set(config),
+  loaded: false,
+
+  loadAndApply: async () => {
+    const dto = await ingressRequest<UiConfigDto>('CONFIG_LOAD', { type: 'PVV_UI_CONFIG' });
+    const appearance: AppearanceConfig = {
+      primaryColor: dto.PrimaryColor ?? null,
+      secondaryColor: dto.SecondaryColor ?? null,
+      logoUrl: dto.LogoUrl ? dto.LogoUrl : null,
+      texts: {
+        welcome: dto.WelcomeText ?? '',
+        footer: dto.FooterText ?? '',
+        companyName: dto.CompanyDisplayName ?? '',
+      },
+    };
+    applyCssVariables(appearance);
+    set({ ...appearance, loaded: true });
+  },
 }));
