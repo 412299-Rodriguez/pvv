@@ -39,6 +39,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
+// MVC controllers (ingress endpoint).
+builder.Services.AddControllers();
+
 // Swagger / OpenAPI.
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -56,9 +59,11 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
-// TODO Sprint 1: IngressRoutesSeeder (hosted service), LeadProjectionService,
-//                SessionMiddleware, FingerprintMiddleware, TurnstileMiddleware,
-//                RateLimiter, and the ingress/payments controllers.
+// TODO HU-06/6B: Fingerprint, Turnstile, Session middlewares + RateLimiter.
+// TODO HU-07/HU-08: lead-event and payments controllers.
+
+// Ingress controller (POST /api/ingress).
+app.MapControllers();
 
 // Health check endpoint.
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "pvv-bff" }));

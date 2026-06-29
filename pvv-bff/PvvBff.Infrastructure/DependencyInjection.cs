@@ -1,13 +1,14 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
+using PvvBff.Application.Abstractions;
+using PvvBff.Infrastructure.Ingress;
 using StackExchange.Redis;
 
 namespace PvvBff.Infrastructure;
 
 /// <summary>
-/// Infrastructure-layer service registration (Redis + MongoDB).
-/// RabbitMQ and external HTTP clients are wired up in Sprint 1.
+/// Infrastructure-layer service registration (Redis + MongoDB + ingress).
 /// </summary>
 public static class DependencyInjection
 {
@@ -32,8 +33,18 @@ public static class DependencyInjection
                 sp.GetRequiredService<IMongoClient>().GetDatabase("pvv_bff_db"));
         }
 
-        // TODO Sprint 1: RabbitMQ connection/publisher, Mongo repositories,
-        //                SoatApiClient, MercadoPagoClient, SessionService.
+        // Ingress (HU-06) — route store, in-process proxy, company-config reader,
+        // and the startup seeder that loads ingress-routes.json into Redis.
+        services.Configure<InternalServicesOptions>(
+            configuration.GetSection(InternalServicesOptions.SectionName));
+        services.AddHttpClient("internal");
+        services.AddScoped<IRouteStore, RedisRouteStore>();
+        services.AddScoped<IInternalHttpProxy, HttpInternalProxy>();
+        services.AddScoped<ICompanyConfigReader, RedisCompanyConfigReader>();
+        services.AddHostedService<IngressRoutesSeederHostedService>();
+
+        // TODO HU-08: RabbitMQ publisher, MercadoPago gateway.
+        // TODO HU-07: Mongo lead repositories.
 
         return services;
     }

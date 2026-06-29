@@ -1,10 +1,11 @@
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+using PvvBff.Application.Ingress;
 
 namespace PvvBff.Application;
 
 /// <summary>
-/// Application-layer service registration (MediatR).
+/// Application-layer service registration (MediatR + internal ingress handlers).
 /// </summary>
 public static class DependencyInjection
 {
@@ -14,6 +15,10 @@ public static class DependencyInjection
         // (ingress handlers, lead-event handlers, etc.).
         services.AddMediatR(cfg =>
             cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
+
+        // Internal ingress handlers (internal://{key}) — resolved by key in a
+        // DI-built registry. Add one line per new concern; no central switch.
+        services.AddScoped<IInternalIngressHandler, CompanyConfigHandler>();
 
         return services;
     }

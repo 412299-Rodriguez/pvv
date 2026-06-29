@@ -1,0 +1,39 @@
+{
+  "routes": [
+    {
+      "hash": "PLATE_SEARCH",
+      "method": "POST",
+      "endpoint": "internal://plate-search",
+      "timeoutSeconds": 15,
+      "targetService": "pvv-soat"
+    },
+    {
+      "hash": "HOLDER_LOOKUP",
+      "method": "GET",
+      "endpoint": "http://localhost:5001/api/holders/{dni}",
+      "timeoutSeconds": 15,
+      "targetService": "pvv-soat"
+    },
+    {
+      "hash": "BUDGET_CALC",
+      "method": "POST",
+      "endpoint": "http://localhost:5001/api/budgets",
+      "timeoutSeconds": 20,
+      "targetService": "pvv-soat"
+    },
+    {
+      "hash": "POLICY_STATUS",
+      "method": "GET",
+      "endpoint": "http://localhost:5001/api/policies/{number}",
+      "timeoutSeconds": 15,
+      "targetService": "pvv-soat"
+    },
+    {
+      "hash": "CONFIG_LOAD",
+      "method": "GET",
+      "endpoint": "internal://company-config",
+      "timeoutSeconds": 5,
+      "targetService": "pvv-config"
+    }
+  ]
+}
