@@ -31,6 +31,7 @@ const initialState: SessionState = {
   contactFound: false,
   policyholder: emptyPolicyholder,
 
+  coverages: [],
   selectedCoverageId: null,
 
   emission: 'idle',
@@ -102,6 +103,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   submitPersonalData: () => set({ step: 'checkout' }),
 
   // ---- Step 4 ----------------------------------------------------------
+  setCoverages: (coverages) => set({ coverages }),
   selectCoverage: (selectedCoverageId) => set({ selectedCoverageId }),
 
   // ---- Step 5 ----------------------------------------------------------

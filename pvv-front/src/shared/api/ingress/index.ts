@@ -4,6 +4,10 @@ export {
   lookupHolder,
   getQuote,
   emitPolicy,
+  createBudget,
+  startPayment,
+  getEmissionStatus,
+  confirmMockPayment,
 } from './ingressClient';
 export {
   holderToPolicyholder,
@@ -19,4 +23,9 @@ export type {
   GetQuoteResponse,
   EmitPolicyRequest,
   EmitPolicyResponse,
+  CreateBudgetRequest,
+  CreateBudgetResponse,
+  StartPaymentRequest,
+  StartPaymentResponse,
+  EmissionStatusResponse,
 } from './contracts';

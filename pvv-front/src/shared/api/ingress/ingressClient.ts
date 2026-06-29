@@ -17,6 +17,7 @@
  */
 import { generatePolicyNumber } from '@/entities/policy';
 
+import { axiosInstance } from '../axiosInstance';
 import { ingressRequest, IngressError } from './ingressRequest';
 import type {
   CheckPlateRequest,
@@ -27,6 +28,11 @@ import type {
   GetQuoteResponse,
   EmitPolicyRequest,
   EmitPolicyResponse,
+  CreateBudgetRequest,
+  CreateBudgetResponse,
+  StartPaymentRequest,
+  StartPaymentResponse,
+  EmissionStatusResponse,
 } from './contracts';
 
 /** Emission is intentionally slower so the "Emitiendo…" screen is visible. */
@@ -76,6 +82,32 @@ export async function getQuote(req: GetQuoteRequest): Promise<GetQuoteResponse> 
   // Real (HU-10): QUOTE builds the coverages from the company's PRODUCT_CONFIG +
   // PRICING_CONFIG, priced by the vehicle's type and year.
   return ingressRequest<GetQuoteResponse>('QUOTE', { plate: req.plate });
+}
+
+export async function createBudget(req: CreateBudgetRequest): Promise<CreateBudgetResponse> {
+  // BUDGET_CALC re-resolves the soat ids in the BFF and creates the budget.
+  return ingressRequest<CreateBudgetResponse>('BUDGET_CALC', { ...req });
+}
+
+export async function startPayment(req: StartPaymentRequest): Promise<StartPaymentResponse> {
+  // PAYMENT_INIT creates the pending transaction + checkout preference.
+  return ingressRequest<StartPaymentResponse>('PAYMENT_INIT', { ...req });
+}
+
+export async function getEmissionStatus(transactionId: string): Promise<EmissionStatusResponse> {
+  // EMISSION_STATUS — polled by the result page after the redirect.
+  return ingressRequest<EmissionStatusResponse>('EMISSION_STATUS', { transactionId });
+}
+
+/**
+ * Mock-checkout → webhook. Stands in for Mercado Pago calling our server-to-server
+ * webhook; this is NOT an ingress call (the webhook is anonymous, outside /api/ingress).
+ */
+export async function confirmMockPayment(transactionId: string, approved: boolean): Promise<void> {
+  await axiosInstance.post('/api/payments/webhook', {
+    transactionId,
+    status: approved ? 'approved' : 'rejected',
+  });
 }
 
 export async function emitPolicy(_req: EmitPolicyRequest): Promise<EmitPolicyResponse> {

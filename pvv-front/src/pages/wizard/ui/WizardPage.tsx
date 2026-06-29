@@ -13,7 +13,6 @@ import { DocumentForm } from '@/features/identify-document';
 import { PersonalDataForm } from '@/features/personal-data';
 import { CoverageSelector } from '@/features/select-coverage';
 import { PaymentSection } from '@/features/checkout';
-import { EmissionResult } from '@/features/policy-emission';
 import { RenewPolicyModal } from '@/features/renew-policy';
 
 import { IntroPanel } from './IntroPanel';
@@ -84,8 +83,6 @@ export function WizardPage() {
               <PurchaseSummary />
             </div>
           )}
-
-          {step === 'result' && <EmissionResult />}
         </div>
       </main>
 

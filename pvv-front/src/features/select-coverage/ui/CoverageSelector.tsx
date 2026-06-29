@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { useSessionStore } from '@/entities/session';
-import { CoverageCard, type Coverage } from '@/entities/coverage';
+import { CoverageCard } from '@/entities/coverage';
 import { getQuote } from '@/shared/api/ingress';
 import { ShieldIcon, Spinner } from '@/shared/ui';
 import { useText } from '@/entities/company';
@@ -16,11 +16,12 @@ import styles from './CoverageSelector.module.css';
 export function CoverageSelector() {
   const selectedId = useSessionStore((s) => s.selectedCoverageId);
   const selectCoverage = useSessionStore((s) => s.selectCoverage);
+  const coverages = useSessionStore((s) => s.coverages);
+  const setCoverages = useSessionStore((s) => s.setCoverages);
   const plate = useSessionStore((s) => s.plate);
   const documentType = useSessionStore((s) => s.documentType);
   const documentNumber = useSessionStore((s) => s.documentNumber);
 
-  const [coverages, setCoverages] = useState<Coverage[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,7 +35,7 @@ export function CoverageSelector() {
     return () => {
       active = false;
     };
-  }, [plate, documentType, documentNumber]);
+  }, [plate, documentType, documentNumber, setCoverages]);
 
   return (
     <section>

@@ -1,25 +1,55 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
-import { useSessionStore } from '@/entities/session';
-import { PAYMENT_PROCESSING_MS } from '@/shared/config';
+import { useSessionStore, selectSelectedCoverage } from '@/entities/session';
+import { vehicleTitle } from '@/entities/vehicle';
+import { policyholderFullName } from '@/entities/policyholder';
+import { createBudget, startPayment } from '@/shared/api/ingress';
 import { Button, MercadoPagoMark } from '@/shared/ui';
 import styles from './PaymentSection.module.css';
 
 /**
  * Step 4 (part 2) — payment method + final CTA.
- * Renders once a coverage is selected. The pay button shows a short processing
- * spinner (simulating the Mercado Pago redirect) and then kicks off emission.
+ * On "Pagar ahora" it creates the soat budget (BUDGET_CALC), opens the checkout
+ * preference (PAYMENT_INIT) and redirects to our mock Mercado Pago checkout.
  */
 export function PaymentSection() {
-  const startEmission = useSessionStore((s) => s.startEmission);
-  const [processing, setProcessing] = useState(false);
+  const plate = useSessionStore((s) => s.plate);
+  const documentNumber = useSessionStore((s) => s.documentNumber);
+  const policyholder = useSessionStore((s) => s.policyholder);
+  const vehicle = useSessionStore((s) => s.vehicle);
+  const coverage = useSessionStore(selectSelectedCoverage);
 
-  // Simulate the payment gateway round-trip, then start policy emission.
-  useEffect(() => {
-    if (!processing) return;
-    const id = window.setTimeout(startEmission, PAYMENT_PROCESSING_MS);
-    return () => window.clearTimeout(id);
-  }, [processing, startEmission]);
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handlePay = async () => {
+    if (!coverage || !vehicle) return;
+    setProcessing(true);
+    setError(null);
+    try {
+      const { budgetId, amount } = await createBudget({
+        plate,
+        dni: documentNumber,
+        firstName: policyholder.firstName,
+        lastName: policyholder.lastName,
+        email: policyholder.email,
+        phone: policyholder.phone,
+        productId: coverage.id,
+        price: coverage.pricePerYear,
+      });
+      const { initPoint } = await startPayment({
+        budgetId,
+        amount,
+        vehicleTitle: vehicleTitle(vehicle),
+        holderName: policyholderFullName(policyholder),
+      });
+      // Hand off to the (mock) Mercado Pago checkout; it returns to /?tx=...
+      window.location.href = initPoint;
+    } catch {
+      setProcessing(false);
+      setError('No pudimos iniciar el pago. Intentá de nuevo.');
+    }
+  };
 
   return (
     <section className={styles.section}>
@@ -58,17 +88,14 @@ export function PaymentSection() {
         </div>
       </div>
 
+      {error && <div className={styles.error}>{error}</div>}
+
       <div className={styles.payBar}>
-        <Button
-          variant="mercadoPago"
-          fullWidth
-          disabled={processing}
-          onClick={() => setProcessing(true)}
-        >
+        <Button variant="mercadoPago" fullWidth disabled={processing} onClick={handlePay}>
           {processing ? (
             <>
               <span className={styles.btnSpinner} />
-              Procesando...
+              Redirigiendo...
             </>
           ) : (
             <>

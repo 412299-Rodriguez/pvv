@@ -1,4 +1,5 @@
 import type { Vehicle } from '@/entities/vehicle';
+import type { Coverage } from '@/entities/coverage';
 import type { ExistingPolicy, IssuedPolicy } from '@/entities/policy';
 import type { DocumentType, Policyholder } from '@/entities/policyholder';
 import type {
@@ -47,6 +48,8 @@ export interface SessionState {
   policyholder: Policyholder;
 
   // ---- Step 4: coverage + payment -------------------------------------
+  /** Coverages quoted for this session (from the QUOTE handler). */
+  coverages: Coverage[];
   selectedCoverageId: string | null;
 
   // ---- Step 5: emission -----------------------------------------------
@@ -77,6 +80,8 @@ export interface SessionActions {
   setPolicyholderField: (field: keyof Policyholder, value: string) => void;
   submitPersonalData: () => void;
 
+  /** Store the quoted coverages so the summary/payment can read price + name. */
+  setCoverages: (coverages: Coverage[]) => void;
   selectCoverage: (id: string) => void;
 
   startEmission: () => void;

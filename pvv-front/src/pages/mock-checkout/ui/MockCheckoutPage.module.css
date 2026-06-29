@@ -1,0 +1,68 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: linear-gradient(160deg, #f0f6ff, #eef1f8);
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  background-color: var(--color-surface);
+  border-radius: 18px;
+  box-shadow: var(--shadow-card);
+  padding: 32px;
+  text-align: center;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 800;
+  color: #009ee3;
+  font-size: 18px;
+}
+
+.badge {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-surface-violet);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.title {
+  margin-top: 18px;
+  font-size: 22px;
+  font-weight: 800;
+}
+.sub {
+  margin-top: 6px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+.amount {
+  margin-top: 16px;
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.buttons {
+  margin-top: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.note {
+  margin-top: 18px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}

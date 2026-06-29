@@ -73,6 +73,51 @@ export interface EmitPolicyResponse {
   validUntilIso: string;
 }
 
+// ---- Budget (created at pay time) ------------------------------------------
+export interface CreateBudgetRequest {
+  plate: string;
+  dni: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  productId: string;
+  price: number;
+}
+export interface CreateBudgetResponse {
+  budgetId: string;
+  amount: number;
+}
+
+// ---- Payment init (Mercado Pago mock) --------------------------------------
+export interface StartPaymentRequest {
+  budgetId: string;
+  amount: number;
+  /** Denormalized so the result page can show the ticket after the redirect. */
+  vehicleTitle: string;
+  holderName: string;
+}
+export interface StartPaymentResponse {
+  transactionId: string;
+  /** URL the front redirects to (our mock checkout). */
+  initPoint: string;
+  amount: number;
+}
+
+// ---- Emission status (polled on the result page) ---------------------------
+export interface EmissionStatusResponse {
+  transactionId: string;
+  /** Pending | Confirmed | Failed | Abandoned. */
+  paymentStatus: string;
+  /** pending | emitting | success | failed | retry-exhausted. */
+  emissionStatus: string;
+  policyNumber: string | null;
+  amount: number;
+  vehicleTitle: string | null;
+  holderName: string | null;
+  emissionUpdatedAt: string | null;
+}
+
 // ---- Holder ↔ Policyholder mapping ----------------------------------------
 export function holderToPolicyholder(holder: HolderDto): Policyholder {
   return {

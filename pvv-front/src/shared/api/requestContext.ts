@@ -6,8 +6,11 @@
 
 export const SESSION_ID_KEY = 'pvv-session-id';
 const CLIENT_ID_KEY = 'pvv-client-id';
+const COMPANY_TOKEN_KEY = 'pvv-company-token';
 
-let companyToken: string | null = null;
+// Persisted so it survives the payment redirect (mock-checkout → result page),
+// where the `?c=` token is no longer in the URL.
+let companyToken: string | null = localStorage.getItem(COMPANY_TOKEN_KEY);
 let turnstileToken: string | null = null;
 
 export const requestContext = {
@@ -16,6 +19,8 @@ export const requestContext = {
   },
   setCompanyToken(value: string | null): void {
     companyToken = value;
+    if (value) localStorage.setItem(COMPANY_TOKEN_KEY, value);
+    else localStorage.removeItem(COMPANY_TOKEN_KEY);
   },
   get turnstileToken(): string | null {
     return turnstileToken;

@@ -1,4 +1,3 @@
-import { findCoverage } from '@/entities/coverage';
 import type { SessionState } from './types';
 
 /**
@@ -7,7 +6,8 @@ import type { SessionState } from './types';
  */
 
 /** The currently selected coverage object (or undefined). */
-export const selectSelectedCoverage = (s: SessionState) => findCoverage(s.selectedCoverageId);
+export const selectSelectedCoverage = (s: SessionState) =>
+  s.coverages.find((c) => c.id === s.selectedCoverageId);
 
 /** Whether step 1 is ready to submit. */
 export const selectCanSubmitPlate = (s: SessionState) => {
