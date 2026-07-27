@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react';
 
 import { useSessionStore } from '@/entities/session';
 import { CoverageCard } from '@/entities/coverage';
-import { getQuote } from '@/shared/api/ingress';
-import { ShieldIcon, Spinner } from '@/shared/ui';
-import { useAlertModalStore } from '@/shared/lib';
+import { getQuote, IngressError } from '@/shared/api/ingress';
+import { Button, ShieldIcon, Spinner } from '@/shared/ui';
 import { useBIStore } from '@/shared/analytics';
 import { useText } from '@/entities/company';
 import styles from './CoverageSelector.module.css';
@@ -24,34 +23,43 @@ export function CoverageSelector() {
   const documentType = useSessionStore((s) => s.documentType);
   const documentNumber = useSessionStore((s) => s.documentNumber);
 
-  const [loading, setLoading] = useState(true);
+  /**
+   * `unavailable` and `error` are different things and must not be worded the
+   * same. A company with no price rule for this vehicle type will never quote
+   * it, no matter how many times the buyer retries; a 500 might work next time.
+   */
+  const [status, setStatus] = useState<'loading' | 'ready' | 'unavailable' | 'error'>('loading');
+  const [retry, setRetry] = useState(0);
   const track = useBIStore((s) => s.track);
-  const showAlert = useAlertModalStore((s) => s.showAlert);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
+
     getQuote({ plate, documentType, documentNumber })
       .then((result) => {
         if (!active) return;
         setCoverages(result.coverages);
-        setLoading(false);
+        // An empty list is a valid answer: the vehicle exists, this company just
+        // has no price for it.
+        setStatus(result.coverages.length > 0 ? 'ready' : 'unavailable');
         track('budget_calculated', { optionsCount: result.coverages.length });
       })
-      .catch(() => {
-        // Without this the spinner would spin forever on a failed quote.
+      .catch((e: unknown) => {
         if (!active) return;
-        setLoading(false);
-        track('wizard_error', { step: 'quote', message: 'quote failed' });
-        showAlert(
-          'No pudimos calcular tu cotización',
-          'Ocurrió un problema. Intentá de nuevo en unos segundos.',
-        );
+        // The BFF answers 404 when the company has no products or pricing at
+        // all — same dead end for the buyer as an empty list.
+        const unavailable = e instanceof IngressError && e.statusCode === 404;
+        setStatus(unavailable ? 'unavailable' : 'error');
+        track('wizard_error', {
+          step: 'quote',
+          message: unavailable ? 'no coverage for vehicle' : 'quote failed',
+        });
       });
+
     return () => {
       active = false;
     };
-  }, [plate, documentType, documentNumber, setCoverages, track, showAlert]);
+  }, [plate, documentType, documentNumber, setCoverages, track, retry]);
 
   // Funnel step 3 completes when a coverage is picked, not when it is shown.
   const handleSelect = (coverageId: string) => {
@@ -70,9 +78,34 @@ export function CoverageSelector() {
         <ShieldIcon />
         {useText('coverageTitle', 'Elegí tu cobertura')}
       </h2>
-      {loading ? (
+      {status === 'loading' ? (
         <div className={styles.loading}>
           <Spinner />
+        </div>
+      ) : status === 'unavailable' ? (
+        // No action offered: the stepper above already lets the buyer go back,
+        // and a button that only retraces a step competes with it.
+        <div className={styles.empty}>
+          <div className={styles.emptyTitle}>No tenemos una cobertura para este vehículo</div>
+          <p className={styles.emptyText}>
+            Todavía no ofrecemos seguro para este tipo de vehículo o para su año.
+          </p>
+        </div>
+      ) : status === 'error' ? (
+        <div className={styles.empty}>
+          <div className={styles.emptyTitle}>No pudimos calcular tu cotización</div>
+          <p className={styles.emptyText}>
+            Hubo un problema al consultar los precios. Volvé a intentar en unos segundos.
+          </p>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setStatus('loading');
+              setRetry((n) => n + 1);
+            }}
+          >
+            Reintentar
+          </Button>
         </div>
       ) : (
         <div className={styles.grid}>

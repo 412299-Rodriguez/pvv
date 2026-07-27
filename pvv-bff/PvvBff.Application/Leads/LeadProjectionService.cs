@@ -72,7 +72,16 @@ public sealed class LeadProjectionService : ILeadProjectionService
             "Lead {FlowId}: applied '{Event}'", leadEvent.FlowId, leadEvent.Name);
     }
 
-    /// <summary>Maps an event name to the fields and milestone it writes.</summary>
+    /// <summary>
+    /// Maps an event name to the fields and milestone it writes.
+    ///
+    /// Two things are recorded, and they answer different questions. LastStep is
+    /// HOW FAR the visitor got — it rises as soon as a step is reached, because
+    /// someone typing their document is already on the holder step whether or
+    /// not they finish it. Steps.StepN.Status is WHETHER that step was finished
+    /// (started / completed), which is what separates "gave us a document" from
+    /// "gave us a way to reach them".
+    /// </summary>
     private static LeadProjection BuildProjection(LeadEvent e)
     {
         var fields = new Dictionary<string, object?>(StringComparer.Ordinal);
@@ -90,6 +99,7 @@ public sealed class LeadProjectionService : ILeadProjectionService
             case LeadEventNames.PlateEntered:
                 fields["Steps.Step1.Status"] = StatusStarted;
                 fields["Steps.Step1.Plate"] = Text(e, "plate");
+                minLastStep = 1;
                 break;
 
             case LeadEventNames.PlateValidated:
@@ -103,6 +113,7 @@ public sealed class LeadProjectionService : ILeadProjectionService
             case LeadEventNames.DocumentEntered:
                 fields["Steps.Step2.Status"] = StatusStarted;
                 fields["Steps.Step2.Dni"] = Text(e, "dni");
+                minLastStep = 2;
                 break;
 
             case LeadEventNames.HolderCompleted:
@@ -122,6 +133,7 @@ public sealed class LeadProjectionService : ILeadProjectionService
             case LeadEventNames.BudgetCalculated:
                 fields["Steps.Step3.Status"] = StatusQuoted;
                 fields["Steps.Step3.OptionsCount"] = Integer(e, "optionsCount");
+                minLastStep = 3;
                 break;
 
             case LeadEventNames.ProductSelected:
@@ -183,7 +195,10 @@ public sealed class LeadProjectionService : ILeadProjectionService
             fields,
             minLastStep,
             status,
-            onlyIfNotCompleted);
+            onlyIfNotCompleted,
+            // An event that does not dictate a status is the visitor still
+            // working, which contradicts an earlier abandonment.
+            RevivesLead: status is null);
     }
 
     private static string? Text(LeadEvent e, string key) =>

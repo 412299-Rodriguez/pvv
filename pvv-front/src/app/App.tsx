@@ -22,6 +22,12 @@ export function App() {
   const markInvalid = usePvvConfigStore((s) => s.markInvalid);
   const startSession = useBIStore((s) => s.startSession);
 
+  // Which view this URL asks for. Computed up here because the tracking below
+  // has to agree with what actually renders.
+  const path = window.location.pathname;
+  const hasTx = new URLSearchParams(window.location.search).has('tx');
+  const view = path.startsWith('/mock-checkout') ? 'checkout' : hasTx ? 'result' : 'wizard';
+
   useEffect(() => {
     // ?c= takes precedence; otherwise reuse the token persisted before a redirect.
     const token = resolveCompanyFromUrl() ?? requestContext.companyToken;
@@ -40,11 +46,15 @@ export function App() {
     void loadAndApply();
   }, [loadAndApply, markInvalid]);
 
-  // Only once the config call has returned: it is what mints the anonymous
-  // session, and firing the opening event alongside it would race for a second one.
   useEffect(() => {
-    if (status === 'ready') startSession();
-  }, [status, startSession]);
+    // Only the wizard is a visit to the point of sale. The checkout hand-off and
+    // the result page are further page loads inside a purchase that already
+    // started, and counting them would invent a lead per redirect.
+    //
+    // Waits for the config call to return: that is what mints the anonymous
+    // session, and firing alongside it would race for a second one.
+    if (status === 'ready' && view === 'wizard') startSession();
+  }, [status, view, startSession]);
 
   if (status === 'loading') {
     return (
@@ -58,14 +68,11 @@ export function App() {
     return <InvalidPortal />;
   }
 
-  const path = window.location.pathname;
-  const hasTx = new URLSearchParams(window.location.search).has('tx');
-
   return (
     <div className={styles.app}>
-      {path.startsWith('/mock-checkout') ? (
+      {view === 'checkout' ? (
         <MockCheckoutPage />
-      ) : hasTx ? (
+      ) : view === 'result' ? (
         <PaymentResultPage />
       ) : (
         <WizardPage />

@@ -60,13 +60,13 @@ export function AppearanceEditor({ companyId }: { companyId: string }) {
   }
 
   if (loading) {
-    return <p className="text-sm text-slate-500">Cargando configuración…</p>
+    return <p className="text-sm text-stone-500">Cargando configuración…</p>
   }
 
   return (
     <div>
       <div className="mb-5 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Apariencia</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-stone-900">Apariencia</h1>
         <div className="flex items-center gap-3">
           {status === 'saved' && <span className="text-sm font-medium text-green-600">Guardado ✓</span>}
           {status === 'error' && <span className="text-sm font-medium text-red-600">Error al guardar</span>}
@@ -77,7 +77,7 @@ export function AppearanceEditor({ companyId }: { companyId: string }) {
       </div>
 
       {/* Subtabs */}
-      <div className="mb-5 flex gap-1 border-b border-slate-200">
+      <div className="mb-5 flex gap-1 border-b border-stone-200">
         {SUBTABS.map((s) => (
           <button
             key={s.key}
@@ -85,8 +85,8 @@ export function AppearanceEditor({ companyId }: { companyId: string }) {
             onClick={() => setTab(s.key)}
             className={`-mb-px border-b-2 px-4 py-2 text-sm font-semibold transition ${
               tab === s.key
-                ? 'border-blue-600 text-blue-700'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                ? 'border-stone-800 font-medium text-stone-900'
+                : 'border-transparent text-stone-500 hover:text-stone-700'
             }`}
           >
             {s.label}
@@ -103,7 +103,7 @@ export function AppearanceEditor({ companyId }: { companyId: string }) {
                   type="color"
                   value={config.PrimaryColor}
                   onChange={(e) => patch({ PrimaryColor: e.target.value })}
-                  className="h-10 w-12 rounded border border-slate-300"
+                  className="h-10 w-12 rounded border border-stone-300"
                 />
                 <input
                   value={config.PrimaryColor}
@@ -118,7 +118,7 @@ export function AppearanceEditor({ companyId }: { companyId: string }) {
                   type="color"
                   value={config.SecondaryColor}
                   onChange={(e) => patch({ SecondaryColor: e.target.value })}
-                  className="h-10 w-12 rounded border border-slate-300"
+                  className="h-10 w-12 rounded border border-stone-300"
                 />
                 <input
                   value={config.SecondaryColor}
@@ -174,7 +174,7 @@ export function AppearanceEditor({ companyId }: { companyId: string }) {
 
         {tab === 'anuncios' && (
           <div className="space-y-3">
-            <p className="text-sm text-slate-500">Imágenes (URL pública) del carrusel de publicidad.</p>
+            <p className="text-sm text-stone-500">Imágenes (URL pública) del carrusel de publicidad.</p>
             {config.AdImages.map((url, i) => (
               <div key={i} className="flex items-center gap-2">
                 <input
@@ -223,7 +223,7 @@ export function AppearanceEditor({ companyId }: { companyId: string }) {
         {tab === 'faq' && (
           <div className="space-y-4">
             {config.Faqs.map((faq, i) => (
-              <div key={i} className="space-y-2 rounded-lg border border-slate-200 p-4">
+              <div key={i} className="space-y-2 rounded-lg border border-stone-200 p-4">
                 <Field label={`Pregunta ${i + 1}`}>
                   <input
                     value={faq.Question}

@@ -24,7 +24,29 @@ public sealed class MongoLeadStore : ILeadStore
         _collection = database.GetCollection<Lead>(CollectionName);
     }
 
-    public Task ApplyAsync(LeadProjection projection, CancellationToken ct)
+    public async Task ApplyAsync(LeadProjection projection, CancellationToken ct)
+    {
+        await UpsertAsync(projection, ct);
+
+        if (projection.RevivesLead)
+            await ReviveAsync(projection.FlowId, ct);
+    }
+
+    /// <summary>
+    /// Undoes an abandonment the visitor has just disproved by acting. Scoped to
+    /// abandoned leads by the filter, so a completed purchase is never reopened.
+    /// </summary>
+    private Task ReviveAsync(string flowId, CancellationToken ct) =>
+        _collection.UpdateOneAsync(
+            Builders<Lead>.Filter.And(
+                Builders<Lead>.Filter.Eq(l => l.Id, flowId),
+                Builders<Lead>.Filter.Eq(l => l.Status, LeadStatus.Abandoned)),
+            Builders<Lead>.Update
+                .Set(l => l.Status, LeadStatus.Active)
+                .Set(l => l.AbandonedAt, null),
+            cancellationToken: ct);
+
+    private Task UpsertAsync(LeadProjection projection, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
 

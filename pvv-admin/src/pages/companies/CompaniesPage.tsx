@@ -1,5 +1,4 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 
 import {
   createCompany,
@@ -8,6 +7,7 @@ import {
   updateCompany,
   type Company,
 } from '@/entities/company'
+import { portalUrl } from '@/shared/lib'
 import { Button, Card, Field, inputClass } from '@/shared/ui'
 
 export function CompaniesPage() {
@@ -19,6 +19,7 @@ export function CompaniesPage() {
   const [cuit, setCuit] = useState('')
   const [creating, setCreating] = useState(false)
 
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editCuit, setEditCuit] = useState('')
@@ -54,6 +55,13 @@ export function CompaniesPage() {
     }
   }
 
+  const copyPortalLink = async (company: Company) => {
+    const url = portalUrl(company.hashedCompanyId)
+    if (!url) return
+    await navigator.clipboard.writeText(url)
+    setCopiedId(company.companyId)
+  }
+
   const startEdit = (company: Company) => {
     setEditingId(company.companyId)
     setEditName(company.name)
@@ -86,10 +94,10 @@ export function CompaniesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-800">Compañías</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-stone-900">Compañías</h1>
 
       <Card>
-        <h2 className="mb-3 font-bold text-slate-800">Nueva compañía</h2>
+        <h2 className="mb-3 font-bold text-stone-800">Nueva compañía</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           <div className="min-w-48 flex-1">
             <Field label="Nombre">
@@ -117,13 +125,13 @@ export function CompaniesPage() {
 
       <Card>
         {loading ? (
-          <p className="text-sm text-slate-500">Cargando…</p>
+          <p className="text-sm text-stone-500">Cargando…</p>
         ) : companies.length === 0 ? (
-          <p className="text-sm text-slate-400">No hay compañías.</p>
+          <p className="text-sm text-stone-400">No hay compañías.</p>
         ) : (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
+              <tr className="border-b border-stone-200 text-stone-500">
                 <th className="py-2">Nombre</th>
                 <th className="py-2">CUIT</th>
                 <th className="py-2">Estado</th>
@@ -133,7 +141,7 @@ export function CompaniesPage() {
             <tbody>
               {companies.map((company) =>
                 editingId === company.companyId ? (
-                  <tr key={company.companyId} className="border-b border-slate-100 bg-slate-50">
+                  <tr key={company.companyId} className="border-b border-stone-100 bg-stone-50">
                     <td className="py-2 pr-2">
                       <input value={editName} onChange={(e) => setEditName(e.target.value)} className={inputClass} />
                     </td>
@@ -141,7 +149,7 @@ export function CompaniesPage() {
                       <input value={editCuit} onChange={(e) => setEditCuit(e.target.value)} className={inputClass} />
                     </td>
                     <td className="py-2">
-                      <label className="flex items-center gap-2 text-sm text-slate-700">
+                      <label className="flex items-center gap-2 text-sm text-stone-700">
                         <input type="checkbox" checked={editActive} onChange={(e) => setEditActive(e.target.checked)} />
                         Activa
                       </label>
@@ -156,13 +164,13 @@ export function CompaniesPage() {
                     </td>
                   </tr>
                 ) : (
-                  <tr key={company.companyId} className="border-b border-slate-100">
-                    <td className="py-3 font-semibold text-slate-800">{company.name}</td>
-                    <td className="py-3 text-slate-600">{company.cuit}</td>
+                  <tr key={company.companyId} className="border-b border-stone-100">
+                    <td className="py-3 font-semibold text-stone-800">{company.name}</td>
+                    <td className="py-3 text-stone-600">{company.cuit}</td>
                     <td className="py-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          company.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+                          company.isActive ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-500'
                         }`}
                       >
                         {company.isActive ? 'Activa' : 'Inactiva'}
@@ -170,12 +178,11 @@ export function CompaniesPage() {
                     </td>
                     <td className="py-3">
                       <div className="flex items-center justify-end gap-3">
-                        <Link
-                          to={`/companias/${company.companyId}`}
-                          className="font-semibold text-blue-600 hover:underline"
-                        >
-                          Configurar
-                        </Link>
+                        {/* The platform admin hands this link to the company;
+                            it is the only thing it needs from the tenant's side. */}
+                        <Button variant="ghost" onClick={() => copyPortalLink(company)}>
+                          {copiedId === company.companyId ? 'Copiado' : 'Copiar portal'}
+                        </Button>
                         <Button variant="secondary" onClick={() => startEdit(company)}>
                           Editar
                         </Button>

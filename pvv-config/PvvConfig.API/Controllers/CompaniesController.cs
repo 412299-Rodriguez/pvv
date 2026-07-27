@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PvvConfig.API.Filters;
 using PvvConfig.Application.Companies.Commands;
 using PvvConfig.Application.Companies.Queries;
 using PvvConfig.Application.DTOs;
@@ -24,17 +25,25 @@ public class CompaniesController(IMediator mediator) : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>Gets a company by its id.</summary>
+    /// <summary>
+    /// Gets a company by its id. An operator may only read its own — the record
+    /// carries the portal hash, which is the tenant key. The route parameter is
+    /// named companyId because that is what <see cref="CompanyOwnershipFilter"/>
+    /// looks for.
+    /// </summary>
     /// <response code="200">The company was found.</response>
+    /// <response code="403">The caller does not own that company.</response>
     /// <response code="404">No company exists with that id.</response>
-    [HttpGet("{id:guid}")]
+    [HttpGet("{companyId:guid}")]
+    [CompanyOwnershipFilter]
     [ProducesResponseType(typeof(CompanyDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
+    public async Task<IActionResult> GetById(Guid companyId, CancellationToken ct)
     {
-        var result = await mediator.Send(new GetCompanyByIdQuery(id), ct);
+        var result = await mediator.Send(new GetCompanyByIdQuery(companyId), ct);
         return result is null
-            ? Problem(detail: $"Company '{id}' was not found.", statusCode: StatusCodes.Status404NotFound)
+            ? Problem(detail: $"Company '{companyId}' was not found.", statusCode: StatusCodes.Status404NotFound)
             : Ok(result);
     }
 
@@ -48,7 +57,7 @@ public class CompaniesController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateCompanyCommand command, CancellationToken ct)
     {
         var result = await mediator.Send(command, ct);
-        return CreatedAtAction(nameof(GetById), new { id = result.CompanyId }, result);
+        return CreatedAtAction(nameof(GetById), new { companyId = result.CompanyId }, result);
     }
 
     /// <summary>Updates a company's editable fields (Name, CUIT, IsActive).</summary>

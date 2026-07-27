@@ -13,6 +13,12 @@ namespace PvvBff.Application.Leads;
 /// Guards the transition: skip the write when the lead is already completed (a
 /// stale abandonment sweep must not undo a finished purchase).
 /// </param>
+/// <param name="RevivesLead">
+/// This event is the visitor doing something, so an abandoned lead goes back to
+/// active. "Abandoned" only ever means "nothing has happened since"; a new event
+/// is proof to the contrary — someone who paused past the timeout and then
+/// carried on has not abandoned anything.
+/// </param>
 public sealed record LeadProjection(
     string FlowId,
     string? CompanyToken,
@@ -20,4 +26,5 @@ public sealed record LeadProjection(
     IReadOnlyDictionary<string, object?> Fields,
     int? MinLastStep = null,
     string? Status = null,
-    bool OnlyIfNotCompleted = false);
+    bool OnlyIfNotCompleted = false,
+    bool RevivesLead = false);

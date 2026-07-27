@@ -9,6 +9,7 @@ public record LoginCommand(string Username, string Password) : IRequest<LoginRes
 
 public class LoginHandler(
     IOperatorRepository operators,
+    ICompanyRepository companies,
     IPasswordHasher passwordHasher,
     IJwtService jwtService) : IRequestHandler<LoginCommand, LoginResponseDto>
 {
@@ -20,7 +21,16 @@ public class LoginHandler(
             throw new UnauthorizedException("Invalid username or password.");
         }
 
-        var (token, expiresAt) = jwtService.GenerateToken(op);
+        // A company operator also carries its portal hash in the token, so pvv-bff
+        // can scope its leads without resolving the hash on every request.
+        string? companyToken = null;
+        if (op.CompanyId.HasValue)
+        {
+            var company = await companies.GetByIdAsync(op.CompanyId.Value, ct);
+            companyToken = company?.HashedCompanyId;
+        }
+
+        var (token, expiresAt) = jwtService.GenerateToken(op, companyToken);
         return new LoginResponseDto(token, expiresAt, op.CompanyId, op.Role.ToString());
     }
 }

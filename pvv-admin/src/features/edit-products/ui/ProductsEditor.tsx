@@ -17,6 +17,145 @@ import { Button, Card, Field, inputClass } from '@/shared/ui'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
+interface IndexedRule {
+  rule: PricingRule
+  /** Position in the saved array — grouping is a view, the list stays flat. */
+  index: number
+}
+
+/** Compact input for a table cell: the column header is already the label. */
+const cellInput =
+  'w-full rounded border border-stone-300 bg-white px-2 py-1.5 text-sm text-stone-900 outline-none transition focus:border-stone-900 focus:ring-2 focus:ring-stone-900/10'
+
+/**
+ * The prices of one product, one row per vehicle type.
+ *
+ * The flat list repeated the product dropdown and all five labels on every
+ * single rule, so four vehicle types across two products meant eight boxed
+ * cards saying mostly the same words. Grouping drops the product from each row
+ * — the heading says it — and the column headers carry the labels once.
+ */
+function PricingGroup({
+  title,
+  entries,
+  missingCount,
+  onAdd,
+  onFill,
+  onUpdate,
+  onRemove,
+}: {
+  title: string
+  entries: IndexedRule[]
+  missingCount: number
+  onAdd?: () => void
+  onFill?: () => void
+  onUpdate: (index: number, changes: Partial<PricingRule>) => void
+  onRemove: (index: number) => void
+}) {
+  return (
+    <div className="rounded-lg border border-stone-200">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 bg-stone-50/60 px-4 py-2.5">
+        <span className="text-sm font-semibold text-stone-900">{title}</span>
+        <div className="flex items-center gap-2">
+          {onFill && missingCount > 0 ? (
+            <button
+              type="button"
+              onClick={onFill}
+              className="text-xs font-medium text-stone-500 underline-offset-4 transition hover:text-stone-900 hover:underline"
+            >
+              Completar los {missingCount} tipos que faltan
+            </button>
+          ) : null}
+          {onAdd ? (
+            <button
+              type="button"
+              onClick={onAdd}
+              className="rounded border border-stone-300 bg-white px-2.5 py-1 text-xs font-medium text-stone-700 transition hover:border-stone-400"
+            >
+              + Precio
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {entries.length === 0 ? (
+        <p className="px-4 py-5 text-sm text-stone-400">Este producto todavía no tiene precios.</p>
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-xs font-medium text-stone-500">
+              <th className="w-44 py-2 pl-4 pr-2">Vehículo</th>
+              <th className="w-28 py-2 pr-2">Año desde</th>
+              <th className="w-28 py-2 pr-2">Año hasta</th>
+              <th className="py-2 pr-2">Precio</th>
+              <th className="w-10 py-2 pr-3" />
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map(({ rule, index }) => (
+              <tr key={rule.PricingId} className="border-t border-stone-100">
+                <td className="py-1.5 pl-4 pr-2">
+                  <select
+                    value={rule.VehicleType}
+                    onChange={(e) => onUpdate(index, { VehicleType: e.target.value })}
+                    className={cellInput}
+                  >
+                    {VEHICLE_TYPES.map((v) => (
+                      <option key={v} value={v}>
+                        {VEHICLE_TYPE_LABELS[v] ?? v}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="py-1.5 pr-2">
+                  <input
+                    type="number"
+                    value={rule.YearFrom}
+                    onChange={(e) => onUpdate(index, { YearFrom: Number(e.target.value) })}
+                    className={`${cellInput} tabular-nums`}
+                  />
+                </td>
+                <td className="py-1.5 pr-2">
+                  <input
+                    type="number"
+                    value={rule.YearTo}
+                    onChange={(e) => onUpdate(index, { YearTo: Number(e.target.value) })}
+                    className={`${cellInput} tabular-nums`}
+                  />
+                </td>
+                <td className="py-1.5 pr-2">
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-sm text-stone-400">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      value={rule.Price}
+                      onChange={(e) => onUpdate(index, { Price: Number(e.target.value) })}
+                      className={`${cellInput} pl-5 tabular-nums`}
+                    />
+                  </div>
+                </td>
+                <td className="py-1.5 pr-3 text-right">
+                  <button
+                    type="button"
+                    onClick={() => onRemove(index)}
+                    title="Quitar este precio"
+                    aria-label="Quitar este precio"
+                    className="rounded px-1.5 py-1 text-stone-400 transition hover:bg-red-50 hover:text-red-600"
+                  >
+                    ✕
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  )
+}
+
 /** Edits a company's PRODUCT_CONFIG + PRICING_CONFIG. Reusable: pass the companyId. */
 export function ProductsEditor({ companyId }: { companyId: string }) {
   const [products, setProducts] = useState<ProductItem[]>([])
@@ -47,6 +186,36 @@ export function ProductsEditor({ companyId }: { companyId: string }) {
     setProducts((ps) => ps.map((p, idx) => (idx === i ? { ...p, ...changes } : p)))
   const updateRule = (i: number, changes: Partial<PricingRule>) =>
     setRules((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...changes } : r)))
+  const removeRule = (i: number) => setRules((rs) => rs.filter((_, idx) => idx !== i))
+
+  /**
+   * Rules carry their position in the saved array so the grouped view can edit
+   * them in place — grouping is a way of showing the list, not of storing it.
+   */
+  const indexedRules = rules.map((rule, index) => ({ rule, index }))
+  const orphanRules = indexedRules.filter(
+    (e) => !products.some((p) => p.ProductId === e.rule.ProductId),
+  )
+
+  /** A new price starts from the last one of its product: usually a small edit. */
+  const newRule = (productId: string, vehicleType: string): PricingRule => {
+    const previous = [...rules].reverse().find((r) => r.ProductId === productId)
+    return {
+      PricingId: crypto.randomUUID(),
+      ProductId: productId,
+      VehicleType: vehicleType,
+      YearFrom: previous?.YearFrom ?? 2010,
+      YearTo: previous?.YearTo ?? new Date().getFullYear(),
+      Price: previous?.Price ?? 0,
+    }
+  }
+
+  const addRule = (productId: string, vehicleType: string) =>
+    setRules((rs) => [...rs, newRule(productId, vehicleType)])
+
+  /** Covering the remaining vehicle types one dropdown at a time is the tedious part. */
+  const fillMissing = (productId: string, missing: readonly string[]) =>
+    setRules((rs) => [...rs, ...missing.map((v) => newRule(productId, v))])
 
   const save = async () => {
     setStatus('saving')
@@ -61,13 +230,13 @@ export function ProductsEditor({ companyId }: { companyId: string }) {
   }
 
   if (loading) {
-    return <p className="text-sm text-slate-500">Cargando productos…</p>
+    return <p className="text-sm text-stone-500">Cargando productos…</p>
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Productos y precios</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-stone-900">Productos y precios</h1>
         <div className="flex items-center gap-3">
           {status === 'saved' && <span className="text-sm font-medium text-green-600">Guardado ✓</span>}
           {status === 'error' && <span className="text-sm font-medium text-red-600">Error al guardar</span>}
@@ -80,7 +249,7 @@ export function ProductsEditor({ companyId }: { companyId: string }) {
       {/* Products */}
       <Card>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-bold text-slate-800">Productos</h2>
+          <h2 className="font-bold text-stone-800">Productos</h2>
           <Button
             variant="secondary"
             onClick={() =>
@@ -99,10 +268,10 @@ export function ProductsEditor({ companyId }: { companyId: string }) {
             + Agregar producto
           </Button>
         </div>
-        {products.length === 0 && <p className="text-sm text-slate-400">Sin productos.</p>}
+        {products.length === 0 && <p className="text-sm text-stone-400">Sin productos.</p>}
         <div className="space-y-3">
           {products.map((p, i) => (
-            <div key={p.ProductId} className="grid gap-3 rounded-lg border border-slate-200 p-4 sm:grid-cols-2">
+            <div key={p.ProductId} className="grid gap-3 rounded-lg border border-stone-200 p-4 sm:grid-cols-2">
               <Field label="Nombre">
                 <input value={p.Name} onChange={(e) => updateProduct(i, { Name: e.target.value })} className={inputClass} />
               </Field>
@@ -122,7 +291,7 @@ export function ProductsEditor({ companyId }: { companyId: string }) {
                   />
                 </Field>
               </div>
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <label className="flex items-center gap-2 text-sm font-medium text-stone-700">
                 <input
                   type="checkbox"
                   checked={p.IsActive}
@@ -140,93 +309,53 @@ export function ProductsEditor({ companyId }: { companyId: string }) {
         </div>
       </Card>
 
-      {/* Pricing rules */}
+      {/* Pricing rules, grouped by product */}
       <Card>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-bold text-slate-800">Reglas de precio</h2>
-          <Button
-            variant="secondary"
-            disabled={products.length === 0}
-            onClick={() =>
-              setRules((rs) => [
-                ...rs,
-                {
-                  PricingId: crypto.randomUUID(),
-                  ProductId: products[0]?.ProductId ?? '',
-                  VehicleType: 'Car',
-                  YearFrom: 2010,
-                  YearTo: new Date().getFullYear(),
-                  Price: 0,
-                },
-              ])
-            }
-          >
-            + Agregar regla
-          </Button>
+        <div className="mb-4">
+          <h2 className="font-semibold text-stone-900">Reglas de precio</h2>
+          <p className="mt-0.5 text-sm text-stone-500">
+            Cuánto sale cada producto según el tipo de vehículo y su año.
+          </p>
         </div>
-        {products.length === 0 && (
-          <p className="text-sm text-slate-400">Agregá un producto primero para poder ponerle precio.</p>
-        )}
-        <div className="space-y-3">
-          {rules.map((r, i) => (
-            <div key={r.PricingId} className="grid items-end gap-3 rounded-lg border border-slate-200 p-4 sm:grid-cols-5">
-              <Field label="Producto">
-                <select
-                  value={r.ProductId}
-                  onChange={(e) => updateRule(i, { ProductId: e.target.value })}
-                  className={inputClass}
-                >
-                  {products.map((p) => (
-                    <option key={p.ProductId} value={p.ProductId}>
-                      {p.Name || '(sin nombre)'}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Vehículo">
-                <select
-                  value={r.VehicleType}
-                  onChange={(e) => updateRule(i, { VehicleType: e.target.value })}
-                  className={inputClass}
-                >
-                  {VEHICLE_TYPES.map((v) => (
-                    <option key={v} value={v}>
-                      {VEHICLE_TYPE_LABELS[v] ?? v}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Año desde">
-                <input
-                  type="number"
-                  value={r.YearFrom}
-                  onChange={(e) => updateRule(i, { YearFrom: Number(e.target.value) })}
-                  className={inputClass}
-                />
-              </Field>
-              <Field label="Año hasta">
-                <input
-                  type="number"
-                  value={r.YearTo}
-                  onChange={(e) => updateRule(i, { YearTo: Number(e.target.value) })}
-                  className={inputClass}
-                />
-              </Field>
-              <div className="flex items-end gap-2">
-                <Field label="Precio">
-                  <input
-                    type="number"
-                    value={r.Price}
-                    onChange={(e) => updateRule(i, { Price: Number(e.target.value) })}
-                    className={inputClass}
-                  />
-                </Field>
-                <Button variant="danger" onClick={() => setRules((rs) => rs.filter((_, idx) => idx !== i))}>
-                  ✕
-                </Button>
-              </div>
-            </div>
-          ))}
+
+        {products.length === 0 ? (
+          <p className="text-sm text-stone-400">
+            Agregá un producto primero para poder ponerle precio.
+          </p>
+        ) : null}
+
+        <div className="space-y-5">
+          {products.map((product) => {
+            const entries = indexedRules.filter((e) => e.rule.ProductId === product.ProductId)
+            const missing = VEHICLE_TYPES.filter(
+              (v) => !entries.some((e) => e.rule.VehicleType === v),
+            )
+
+            return (
+              <PricingGroup
+                key={product.ProductId}
+                title={product.Name || '(sin nombre)'}
+                entries={entries}
+                missingCount={missing.length}
+                onAdd={() => addRule(product.ProductId, missing[0] ?? 'Car')}
+                onFill={() => fillMissing(product.ProductId, missing)}
+                onUpdate={updateRule}
+                onRemove={removeRule}
+              />
+            )
+          })}
+
+          {/* A rule whose product no longer exists would otherwise disappear from
+              the screen while still being saved. Show it so it can be dealt with. */}
+          {orphanRules.length > 0 ? (
+            <PricingGroup
+              title="Sin producto asociado"
+              entries={orphanRules}
+              missingCount={0}
+              onUpdate={updateRule}
+              onRemove={removeRule}
+            />
+          ) : null}
         </div>
       </Card>
     </div>

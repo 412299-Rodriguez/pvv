@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { login, useSessionStore } from '@/entities/session'
+import { Button, Field, inputClass } from '@/shared/ui'
 
 export function LoginPage() {
   const setSession = useSessionStore((s) => s.setSession)
@@ -24,7 +25,7 @@ export function LoginPage() {
         companyId: result.companyId,
         username,
       })
-      navigate(result.role === 'SystemAdmin' ? '/companias' : '/apariencia', { replace: true })
+      navigate(result.role === 'SystemAdmin' ? '/companias' : '/dashboard', { replace: true })
     } catch {
       setError('Usuario o contraseña incorrectos.')
     } finally {
@@ -33,43 +34,57 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg">
-        <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-slate-800">PVV Admin</h1>
-          <p className="mt-1 text-sm text-slate-500">Panel de configuración</p>
+    <div className="flex min-h-screen items-center justify-center p-6">
+      <div className="w-full max-w-sm">
+        {/* The mark sits outside the form, left-aligned with it, so the card
+            holds only the two things it is asking for. */}
+        <div className="mb-8 flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded bg-stone-900 text-[11px] font-bold tracking-tight text-white">
+            PVV
+          </span>
+          <div>
+            <div className="text-base font-semibold tracking-tight text-stone-900">
+              Panel de administración
+            </div>
+            <div className="text-sm text-stone-500">Portal Venta Vehicular</div>
+          </div>
         </div>
 
-        <label className="mb-1 block text-sm font-semibold text-slate-700">Usuario</label>
-        <input
-          type="text"
-          autoComplete="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="mb-4 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-          placeholder="usuario@empresa.com"
-        />
-
-        <label className="mb-1 block text-sm font-semibold text-slate-700">Contraseña</label>
-        <input
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-          placeholder="••••••••"
-        />
-
-        {error && <p className="mt-3 text-sm font-medium text-red-600">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={loading || !username || !password}
-          className="mt-6 w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 rounded-lg border border-stone-200 bg-white p-6"
         >
-          {loading ? 'Ingresando…' : 'Ingresar'}
-        </button>
-      </form>
+          <Field label="Usuario">
+            <input
+              type="text"
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className={inputClass}
+              placeholder="usuario@empresa.com"
+            />
+          </Field>
+
+          <Field label="Contraseña">
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputClass}
+              placeholder="••••••••"
+            />
+          </Field>
+
+          {error ? (
+            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+          ) : null}
+
+          <Button type="submit" disabled={loading || !username || !password} className="w-full">
+            {loading ? 'Ingresando…' : 'Ingresar'}
+          </Button>
+        </form>
+      </div>
     </div>
   )
 }

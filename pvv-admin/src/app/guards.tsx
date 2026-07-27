@@ -15,7 +15,7 @@ export function ProtectedLayout() {
 /** Sends the user to their role's home screen. */
 export function HomeRedirect() {
   const role = useSessionStore((s) => s.role)
-  return <Navigate to={role === 'SystemAdmin' ? '/companias' : '/apariencia'} replace />
+  return <Navigate to={role === 'SystemAdmin' ? '/companias' : '/dashboard'} replace />
 }
 
 /** Restricts a route to a single role; otherwise bounces to the role's home. */

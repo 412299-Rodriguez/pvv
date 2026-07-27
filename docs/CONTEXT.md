@@ -58,6 +58,7 @@ en Argentina, soportando múltiples compañías aseguradoras desde una misma pla
     /scripts/
   /docs/
     arquitectura-pvv.md   ← leer antes de cualquier tarea
+    datos-de-prueba.md    ← credenciales, portales, patentes y casos borde
     sprint0-checklist.md
   .gitignore
   README.md
@@ -85,7 +86,22 @@ en Argentina, soportando múltiples compañías aseguradoras desde una misma pla
 - Nunca lógica de negocio en componentes — extraer a custom hooks o stores Zustand
 - Siempre tipar explícitamente, nunca usar `any`
 - Axios instance centralizada en `shared/api`, nunca fetch directo en componentes
-- Estilos con **CSS Modules + design tokens** (un `*.module.css` por componente; todos los colores/radios/sombras como CSS custom properties en `app/styles/tokens.css`). Nunca estilos inline salvo valores dinámicos (CSS vars). _Decisión Sprint 2 / HU-05: el mockup reusado (`pvv-front`) está hecho con CSS Modules y ya es mobile-first; las CSS vars encajan mejor con el theming dinámico desde pvv-config. Reemplaza la regla original de "solo Tailwind"; se descartó el setup Tailwind del scaffold._
+- Los dos frontends **no comparten sistema de estilos**, y es a propósito:
+
+  **`pvv-front` (portal) → CSS Modules + design tokens.** Un `*.module.css` por
+  componente; colores, radios y sombras como CSS custom properties en
+  `app/styles/tokens.css`. Nunca estilos inline salvo valores dinámicos. _Decisión
+  Sprint 2 / HU-05: el mockup reusado ya estaba hecho con CSS Modules y es mobile-first,
+  y las CSS vars son lo que permite inyectar los colores de cada compañía en runtime.
+  Reemplaza la regla original de "solo Tailwind" para este proyecto._
+
+  **`pvv-admin` (panel) → Tailwind v4, monocromo.** Neutros cálidos (`stone`, nunca
+  `slate`), tinta (`stone-900`) como color interactivo — botón primario, tab activa,
+  segmento seleccionado — y **el color reservado para estado**: verde vendido, ámbar
+  abandonado, rojo rechazado. Nada más lleva color. Superficies con hairline y sin
+  sombra, salvo lo que flota de verdad (modales, tooltips). _Razón de producto: el
+  portal de cada compañía es el lugar donde va una marca; el panel que configura a
+  todas no debe competir con ninguna._
 
 ---
 
@@ -139,11 +155,35 @@ Colas: `pvv_emission_queue` (worker principal), `pvv_emission_dlq` (dead letter)
 - [x] pvv-soat: entidades (Vehicle, Holder, Budget, Policy), EF Core, migración real, CQRS (vehículos/tomadores/presupuestos/pólizas), repositorios, controllers + ProblemDetails, BudgetExpirationJob, seeder
 - [x] pvv-config: modelo EAV (Company, Configuration, ConfigurationHistory, Operator), migración real, Auth JWT + BCrypt, cifrado AES-256, CQRS (companies/configurations), endpoints + CompanyOwnershipFilter, CacheSyncWorker con Redis Pub/Sub, seeder
 
-### Sprint 2 — Orquestación: pvv-bff + pvv-emission + pvv-front (semanas 4-5)
-**Pendiente — sprint actual**
+### Sprint 2 — Orquestación: pvv-bff + pvv-emission + pvv-front (semanas 4-5) ✅ COMPLETADO
+- [x] **HU-05 pvv-front** — wizard de 5 pasos (se reusó el mockup FSD ya validado)
+- [x] **HU-06 pvv-bff gateway** — ingress por hash (proxy + handlers internos), pipeline
+      Fingerprint → Turnstile → Session → RateLimiter, CORS, ProblemDetails
+- [x] **HU-08 pvv-bff pagos** — `IPaymentGateway` con implementación **mock**, webhook,
+      publicación a RabbitMQ, job de abandono. Mercado Pago real queda para HU-11
+- [x] **HU-09 pvv-emission** — consumer con backoff exponencial y DLQ
+- [x] **HU-10 integración e2e** — cliente ingress real, theming y textos por compañía,
+      compra completa funcionando de punta a punta
+- [x] **HU-07 leads** — captura de eventos del wizard y proyección del embudo en MongoDB
 
 ### Sprint 3 — Admin + Analytics + Testing (semanas 6-7)
-**Pendiente**
+- [x] **pvv-admin configuración** — login por rol, apariencia, productos y precios,
+      ABM de compañías y operadores
+- [x] **pvv-admin analytics** — embudo de conversión, tabla de leads con filtros,
+      exportación y recupero de abandonos
+- [ ] **HU-11 Mercado Pago real** — reemplazar el mock por preferencia y webhook reales
+- [ ] **HU-12 Recuperación de leads por email** — le da funcionalidad real al botón
+      **Recuperar** de la tabla de leads, que hoy solo abre el cliente de correo del
+      operador. **Solo por email y solo a los leads que dejaron sus datos**: sin
+      dirección de correo no hay recupero posible y la acción no se ofrece. Incluye
+      envío desde el backend, plantilla configurable por compañía y registro de a
+      quién ya se contactó. Detalle en `docs/arquitectura-pvv.md` §11.2
+- [ ] **Testing** — camino crítico (ingress, reintentos/DLQ de emisión, pagos, proyección de leads)
+- [ ] **Sección de infraestructura para el superadmin** — rutas de ingress y punteros de
+      servicios en Redis, separada de la configuración por inquilino
+
+> Para levantar todo y recorrer los casos de prueba: **`docs/datos-de-prueba.md`**
+> (credenciales, portales de cada compañía, patentes y qué valida cada una, casos borde).
 
 ---
 
@@ -226,6 +266,26 @@ queue.OnMessage(channelMessage => HandleAsync(channelMessage.Message, ct));
 - SignalR / WebSockets
 - HMAC validation en BFF
 - Múltiples workers de emisión (solo uno: EmissionWorker)
+- Recupero de leads por cualquier canal que no sea email (nada de SMS ni llamadas),
+  y recupero de leads que no dejaron datos de contacto
+
+---
+
+## Limitación conocida — borrar una compañía no borra sus leads
+
+Al eliminar una compañía se borran en cascada su configuración, su historial y sus
+operadores: todo eso vive en la misma base SQL. **Sus leads sobreviven**, porque
+viven en el MongoDB de pvv-bff — otro servicio, otro motor, y ninguna transacción
+cruza esa frontera.
+
+No es un olvido: es la consecuencia directa de que cada servicio sea dueño de sus
+datos. Ese aislamiento es lo que permite desplegarlos por separado, y el precio es
+que un borrado que abarca a más de uno deja de ser atómico. La salida idiomática
+sería publicar un evento `CompanyDeleted` y que pvv-bff limpie lo suyo al consumirlo
+(consistencia eventual); la alternativa es dejarlos como registro histórico. Se
+documenta en vez de resolverse porque la decisión depende de si los leads son dato
+operativo o histórico, que es una pregunta de negocio. Desarrollado en
+`docs/arquitectura-pvv.md` §11.1.
 
 ---
 

@@ -18,7 +18,8 @@ public class ConfigurationsController(IMediator mediator) : ControllerBase
     /// <response code="404">No configuration exists for that company and type.</response>
     [HttpGet("{companyId:guid}/{type}")]
     [Authorize]
-    [CompanyOwnershipFilter]
+    // A tenant's own configuration: only its operator, never the platform admin.
+    [CompanyOwnershipFilter(AllowSystemAdmin = false)]
     [ProducesResponseType(typeof(ConfigurationDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(Guid companyId, string type, CancellationToken ct)
@@ -35,7 +36,8 @@ public class ConfigurationsController(IMediator mediator) : ControllerBase
     /// <response code="404">The company does not exist.</response>
     [HttpPut("{companyId:guid}/{type}")]
     [Authorize]
-    [CompanyOwnershipFilter]
+    // A tenant's own configuration: only its operator, never the platform admin.
+    [CompanyOwnershipFilter(AllowSystemAdmin = false)]
     [ProducesResponseType(typeof(ConfigurationDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Upsert(
