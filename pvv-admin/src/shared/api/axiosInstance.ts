@@ -5,32 +5,44 @@ const TOKEN_KEY = 'pvv-admin-token'
 const SESSION_KEY = 'pvv-admin-session'
 
 /**
- * Central HTTP client for pvv-admin. Talks to pvv-config for CRUD operations.
- * The interceptor attaches the operator's JWT from localStorage; a 401 clears the
- * session and bounces to /login.
+ * Builds an HTTP client that speaks for the logged-in operator: the interceptor
+ * attaches the JWT from localStorage, and a 401 clears the session and bounces
+ * to /login. The same pvv-config token is accepted by both back ends.
  */
-export const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_CONFIG_API_BASE_URL,
-})
+function createClient(baseURL: string | undefined) {
+  // exactOptionalPropertyTypes: pass the option only when it actually has a value.
+  const client = axios.create(baseURL ? { baseURL } : {})
 
-axiosInstance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = localStorage.getItem(TOKEN_KEY)
-  if (token) {
-    config.headers.set('Authorization', `Bearer ${token}`)
-  }
-  return config
-})
-
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error?.response?.status === 401) {
-      localStorage.removeItem(TOKEN_KEY)
-      localStorage.removeItem(SESSION_KEY)
-      if (window.location.pathname !== '/login') {
-        window.location.assign('/login')
-      }
+  client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+    const token = localStorage.getItem(TOKEN_KEY)
+    if (token) {
+      config.headers.set('Authorization', `Bearer ${token}`)
     }
-    return Promise.reject(error)
-  },
-)
+    return config
+  })
+
+  client.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error?.response?.status === 401) {
+        localStorage.removeItem(TOKEN_KEY)
+        localStorage.removeItem(SESSION_KEY)
+        if (window.location.pathname !== '/login') {
+          window.location.assign('/login')
+        }
+      }
+      return Promise.reject(error)
+    },
+  )
+
+  return client
+}
+
+/** pvv-config — company / product / pricing / appearance CRUD. */
+export const axiosInstance = createClient(import.meta.env.VITE_CONFIG_API_BASE_URL)
+
+/**
+ * pvv-bff — analytics. The leads live in the BFF's MongoDB, so the dashboard
+ * reads them straight from there rather than through pvv-config.
+ */
+export const bffInstance = createClient(import.meta.env.VITE_BFF_BASE_URL)

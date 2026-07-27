@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 import { LoginPage } from '@/pages/login/LoginPage'
+import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { AppearancePage } from '@/pages/appearance/AppearancePage'
 import { ProductsPage } from '@/pages/products/ProductsPage'
 import { CompaniesPage } from '@/pages/companies/CompaniesPage'
@@ -16,6 +17,14 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomeRedirect /> },
       // CompanyOperator
+      {
+        path: 'dashboard',
+        element: (
+          <RoleRoute allow="CompanyOperator">
+            <DashboardPage />
+          </RoleRoute>
+        ),
+      },
       {
         path: 'apariencia',
         element: (

@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { useSessionStore } from '@/entities/session'
 
 const OPERATOR_TABS = [
+  { to: '/dashboard', label: 'Dashboard' },
   { to: '/apariencia', label: 'Apariencia' },
   { to: '/productos', label: 'Productos' },
 ]
