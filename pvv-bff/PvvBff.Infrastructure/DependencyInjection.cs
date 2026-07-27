@@ -70,6 +70,11 @@ public static class DependencyInjection
         services.Configure<PaymentOptions>(configuration.GetSection(PaymentOptions.SectionName));
         services.Configure<MercadoPagoOptions>(configuration.GetSection(MercadoPagoOptions.SectionName));
 
+        // Registered whatever the gateway is: the notification endpoint exists either
+        // way, and with no secret configured it fails closed rather than silently
+        // accepting unsigned callbacks.
+        services.AddSingleton<IPaymentWebhookVerifier, MercadoPagoSignatureValidator>();
+
         var gatewayKind = configuration.GetValue<PaymentGatewayKind>(
             $"{PaymentOptions.SectionName}:Gateway");
 
