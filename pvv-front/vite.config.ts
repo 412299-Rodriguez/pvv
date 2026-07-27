@@ -14,5 +14,10 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    // Mercado Pago refuses to store a back_url on localhost, so returning from a
+    // real checkout requires the portal to be reachable at a public address. In
+    // development that is a cloudflared quick tunnel, whose hostname is random on
+    // every run — hence the wildcard rather than a fixed host. Dev server only.
+    allowedHosts: ['.trycloudflare.com'],
   },
 })
