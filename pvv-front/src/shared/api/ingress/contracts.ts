@@ -96,6 +96,12 @@ export interface StartPaymentRequest {
   /** Denormalized so the result page can show the ticket after the redirect. */
   vehicleTitle: string;
   holderName: string;
+  /**
+   * Ties the payment to the lead. The BFF stores it on the transaction and uses
+   * it to record steps 4 and 5 on its own — this browser is about to be
+   * redirected away and may never come back.
+   */
+  flowId: string;
 }
 export interface StartPaymentResponse {
   transactionId: string;
@@ -120,6 +126,10 @@ export interface EmissionStatusResponse {
   validUntil: string | null;
   emissionUpdatedAt: string | null;
 }
+
+// ---- Lead tracking ---------------------------------------------------------
+/** Flat, primitive-only event data (the BFF reads it key by key). */
+export type LeadEventPayload = Record<string, string | number | boolean | undefined>;
 
 // ---- Holder ↔ Policyholder mapping ----------------------------------------
 export function holderToPolicyholder(holder: HolderDto): Policyholder {

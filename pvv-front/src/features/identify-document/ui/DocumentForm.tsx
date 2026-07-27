@@ -3,7 +3,8 @@ import { useSessionStore } from '@/entities/session';
 import { DOCUMENT_TYPES } from '@/entities/policyholder';
 import { lookupHolder } from '@/shared/api/ingress';
 import { Card, SegmentedControl, TextField, Button, UserIcon } from '@/shared/ui';
-import { digitsOnly } from '@/shared/lib';
+import { digitsOnly, useAlertModalStore } from '@/shared/lib';
+import { useBIStore } from '@/shared/analytics';
 import { useText } from '@/entities/company';
 import styles from './DocumentForm.module.css';
 
@@ -21,6 +22,8 @@ export function DocumentForm() {
   const goBack = useSessionStore((s) => s.goBack);
 
   const [searching, setSearching] = useState(false);
+  const track = useBIStore((s) => s.track);
+  const showAlert = useAlertModalStore((s) => s.showAlert);
 
   // A document is mandatory to continue (min length covers a short DNI).
   const canContinue = documentNumber.trim().length >= 7;
@@ -29,9 +32,20 @@ export function DocumentForm() {
   const handleSearch = async () => {
     if (!canContinue) return;
     setSearching(true);
+    // Not a milestone on its own — step 2 needs the contact details too — but it
+    // separates "left at the document" from "left filling in the form".
+    track('document_entered', { dni: documentNumber });
     try {
       const result = await lookupHolder({ documentType, documentNumber });
       applyHolderLookup(result);
+    } catch {
+      // Only a real failure lands here: an unknown document already comes back
+      // as "not found" and sends the user to the manual form.
+      track('wizard_error', { step: 'document', message: 'holder lookup failed' });
+      showAlert(
+        'No pudimos buscar tus datos',
+        'Ocurrió un problema. Intentá de nuevo en unos segundos.',
+      );
     } finally {
       setSearching(false);
     }

@@ -33,6 +33,7 @@ import type {
   StartPaymentRequest,
   StartPaymentResponse,
   EmissionStatusResponse,
+  LeadEventPayload,
 } from './contracts';
 
 /** Emission is intentionally slower so the "Emitiendo…" screen is visible. */
@@ -107,6 +108,20 @@ export async function confirmMockPayment(transactionId: string, approved: boolea
   await axiosInstance.post('/api/payments/webhook', {
     transactionId,
     status: approved ? 'approved' : 'rejected',
+  });
+}
+
+/**
+ * Reports one wizard event to the BFF, which projects it onto the lead.
+ *
+ * Deliberately fire-and-forget: tracking must never delay the wizard or surface
+ * an error to the buyer, so the promise is swallowed. Only the events the client
+ * is allowed to raise are accepted — the payment and emission ones are recorded
+ * by the BFF itself.
+ */
+export function sendLeadEvent(event: string, flowId: string, payload?: LeadEventPayload): void {
+  void ingressRequest('LEAD_EVENT', { event, flowId, payload: payload ?? {} }).catch(() => {
+    // Ignored on purpose: analytics must not break the purchase.
   });
 }
 

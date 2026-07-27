@@ -1,2 +1,2 @@
 export { useBIStore } from './biStore';
-export type { BiEvent, BiEventName } from './biStore';
+export type { BiEventName } from './biStore';

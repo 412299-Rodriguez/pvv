@@ -4,6 +4,7 @@ import { useSessionStore } from '@/entities/session';
 import type { Policyholder } from '@/entities/policyholder';
 import { Card, TextField, Button, MailIcon } from '@/shared/ui';
 import { isNonEmptyName, isValidEmail, isValidPhone, digitsOnly } from '@/shared/lib';
+import { useBIStore } from '@/shared/analytics';
 import styles from './PersonalDataForm.module.css';
 
 /** Per-field validation rules and their error copy. */
@@ -23,6 +24,8 @@ type FieldFlags = Partial<Record<keyof Policyholder, boolean>>;
 export function PersonalDataForm() {
   const contactFound = useSessionStore((s) => s.contactFound);
   const policyholder = useSessionStore((s) => s.policyholder);
+  const documentNumber = useSessionStore((s) => s.documentNumber);
+  const track = useBIStore((s) => s.track);
   const setField = useSessionStore((s) => s.setPolicyholderField);
   const submit = useSessionStore((s) => s.submitPersonalData);
   const goBack = useSessionStore((s) => s.goBack);
@@ -53,6 +56,14 @@ export function PersonalDataForm() {
       setShowErrors({ firstName: true, lastName: true, email: true, phone: true });
       return;
     }
+    // Funnel step 2: from here on we know who the buyer is and how to reach them.
+    track('holder_completed', {
+      firstName: policyholder.firstName,
+      lastName: policyholder.lastName,
+      dni: documentNumber,
+      email: policyholder.email,
+      phone: policyholder.phone,
+    });
     submit();
   };
 

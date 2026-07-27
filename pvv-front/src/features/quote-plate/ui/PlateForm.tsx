@@ -1,8 +1,10 @@
 import { useState, type ReactNode } from 'react';
 import { useSessionStore, selectCanSubmitPlate } from '@/entities/session';
+import { vehicleTitle } from '@/entities/vehicle';
 import { checkPlate, IngressError } from '@/shared/api/ingress';
 import { Card, Button, Checkbox, CheckIcon, LockIcon } from '@/shared/ui';
 import { normalizePlate, isPlateValid, useInfoModalStore, useAlertModalStore } from '@/shared/lib';
+import { useBIStore } from '@/shared/analytics';
 import { useText } from '@/entities/company';
 import styles from './PlateForm.module.css';
 
@@ -28,6 +30,7 @@ export function PlateForm() {
   const secureNote = useText('secureNote', 'Tus datos están protegidos');
   const openModal = useInfoModalStore((s) => s.openModal);
   const showAlert = useAlertModalStore((s) => s.showAlert);
+  const track = useBIStore((s) => s.track);
 
   // Normalize and cap at 7 alphanumeric characters (Mercosur plate max).
   const handlePlateChange = (raw: string) => {
@@ -38,16 +41,20 @@ export function PlateForm() {
   // Run the (mock) backend plate lookup, then let the store decide what's next.
   const handleSubmit = async () => {
     setChecking(true);
+    track('plate_entered', { plate });
     try {
       const result = await checkPlate({ plate });
+      track('plate_validated', { plate, vehicleTitle: vehicleTitle(result.vehicle) });
       applyPlateCheck(result);
     } catch (e) {
       if (e instanceof IngressError && e.statusCode === 404) {
+        track('wizard_error', { step: 'plate', message: 'vehicle not found' });
         showAlert(
           'No encontramos ese vehículo',
           'Verificá que la patente esté bien escrita e intentá de nuevo.',
         );
       } else {
+        track('wizard_error', { step: 'plate', message: 'plate lookup failed' });
         showAlert(
           'No pudimos validar la patente',
           'Ocurrió un problema. Intentá de nuevo en unos segundos.',

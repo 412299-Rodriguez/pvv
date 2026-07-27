@@ -5,6 +5,7 @@ import { vehicleTitle } from '@/entities/vehicle';
 import { policyholderFullName } from '@/entities/policyholder';
 import { createBudget, startPayment } from '@/shared/api/ingress';
 import { useAlertModalStore } from '@/shared/lib';
+import { useBIStore } from '@/shared/analytics';
 import { Button, MercadoPagoMark } from '@/shared/ui';
 import styles from './PaymentSection.module.css';
 
@@ -22,6 +23,8 @@ export function PaymentSection() {
 
   const [processing, setProcessing] = useState(false);
   const showAlert = useAlertModalStore((s) => s.showAlert);
+  const flowId = useBIStore((s) => s.flowId);
+  const track = useBIStore((s) => s.track);
 
   const handlePay = async () => {
     if (!coverage || !vehicle) return;
@@ -37,16 +40,20 @@ export function PaymentSection() {
         productId: coverage.id,
         price: coverage.pricePerYear,
       });
+      // The flow travels with the payment: from here on the BFF records the
+      // funnel on its own, because this page is about to be replaced.
       const { initPoint } = await startPayment({
         budgetId,
         amount,
         vehicleTitle: vehicleTitle(vehicle),
         holderName: policyholderFullName(policyholder),
+        flowId,
       });
       // Hand off to the (mock) Mercado Pago checkout; it returns to /?tx=...
       window.location.href = initPoint;
     } catch {
       setProcessing(false);
+      track('wizard_error', { step: 'checkout', message: 'payment start failed' });
       showAlert('No pudimos iniciar el pago', 'Ocurrió un problema. Intentá de nuevo en unos segundos.');
     }
   };

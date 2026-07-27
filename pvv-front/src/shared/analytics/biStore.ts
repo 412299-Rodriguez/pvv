@@ -1,39 +1,50 @@
 import { create } from 'zustand';
 
+import { sendLeadEvent } from '@/shared/api/ingress';
+import type { LeadEventPayload } from '@/shared/api/ingress';
+
 /**
- * BI / behavioural-tracking store — RESERVED for HU-07 (pvv-bff leads).
+ * BI / behavioural tracking. Every wizard action reports one event, which the
+ * BFF projects onto the lead (its conversion-funnel view).
  *
- * The wizard is meant to emit a tracking event per step so the BFF can build the
- * lead profile (see the architecture BI events table). This skeleton holds the
- * event shape and a local `track` action, but it is NOT wired into any component
- * yet. HU-07 will forward each event to the BFF wizard-event endpoint
- * (LEAD_EVENT) instead of (or in addition to) buffering it locally.
+ * Only the events the browser can actually observe live here. Payment
+ * confirmation, abandonment and emission are recorded server-side: the user is
+ * redirected to the checkout at that point, and this store's state does not
+ * survive the round trip.
  */
 export type BiEventName =
-  | 'wizard_start'
+  | 'session_start'
   | 'plate_entered'
+  | 'plate_validated'
   | 'document_entered'
-  | 'personal_completed'
-  | 'coverage_selected'
-  | 'payment_started'
-  | 'policy_emitted'
+  | 'holder_completed'
+  | 'budget_calculated'
+  | 'product_selected'
   | 'wizard_error';
 
-export interface BiEvent {
-  name: BiEventName;
-  /** ISO timestamp of when the event fired. */
-  at: string;
-  payload?: Record<string, unknown> | undefined;
-}
-
 interface BiState {
-  events: BiEvent[];
-  /** TODO HU-07: also POST the event to the BFF wizard-event endpoint. */
-  track: (name: BiEventName, payload?: Record<string, unknown>) => void;
+  /**
+   * Identifies one purchase attempt, and therefore one lead. It is minted per
+   * page load, which is all a restart needs today: "Volver al inicio" navigates
+   * rather than resetting in place.
+   */
+  flowId: string;
+  /** Guards the opening event against React's double effect invocation in dev. */
+  sessionStarted: boolean;
+  /** Reports that the portal finished loading; safe to call more than once. */
+  startSession: () => void;
+  track: (name: BiEventName, payload?: LeadEventPayload) => void;
 }
 
-export const useBIStore = create<BiState>((set) => ({
-  events: [],
-  track: (name, payload) =>
-    set((s) => ({ events: [...s.events, { name, at: new Date().toISOString(), payload }] })),
+export const useBIStore = create<BiState>((set, get) => ({
+  flowId: crypto.randomUUID(),
+  sessionStarted: false,
+
+  startSession: () => {
+    if (get().sessionStarted) return;
+    set({ sessionStarted: true });
+    sendLeadEvent('session_start', get().flowId);
+  },
+
+  track: (name, payload) => sendLeadEvent(name, get().flowId, payload),
 }));

@@ -6,6 +6,7 @@ import { MockCheckoutPage } from '@/pages/mock-checkout';
 import { PaymentResultPage } from '@/pages/payment-result';
 import { resolveCompanyFromUrl, usePvvConfigStore } from '@/entities/company';
 import { requestContext } from '@/shared/api';
+import { useBIStore } from '@/shared/analytics';
 import { Spinner } from '@/shared/ui';
 import styles from './App.module.css';
 
@@ -19,6 +20,7 @@ export function App() {
   const status = usePvvConfigStore((s) => s.status);
   const loadAndApply = usePvvConfigStore((s) => s.loadAndApply);
   const markInvalid = usePvvConfigStore((s) => s.markInvalid);
+  const startSession = useBIStore((s) => s.startSession);
 
   useEffect(() => {
     // ?c= takes precedence; otherwise reuse the token persisted before a redirect.
@@ -37,6 +39,12 @@ export function App() {
     requestContext.setCompanyToken(token);
     void loadAndApply();
   }, [loadAndApply, markInvalid]);
+
+  // Only once the config call has returned: it is what mints the anonymous
+  // session, and firing the opening event alongside it would race for a second one.
+  useEffect(() => {
+    if (status === 'ready') startSession();
+  }, [status, startSession]);
 
   if (status === 'loading') {
     return (

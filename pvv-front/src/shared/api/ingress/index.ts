@@ -8,6 +8,7 @@ export {
   startPayment,
   getEmissionStatus,
   confirmMockPayment,
+  sendLeadEvent,
 } from './ingressClient';
 export {
   holderToPolicyholder,
@@ -28,4 +29,5 @@ export type {
   StartPaymentRequest,
   StartPaymentResponse,
   EmissionStatusResponse,
+  LeadEventPayload,
 } from './contracts';

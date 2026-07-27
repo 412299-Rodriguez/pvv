@@ -4,6 +4,8 @@ import { useSessionStore } from '@/entities/session';
 import { CoverageCard } from '@/entities/coverage';
 import { getQuote } from '@/shared/api/ingress';
 import { ShieldIcon, Spinner } from '@/shared/ui';
+import { useAlertModalStore } from '@/shared/lib';
+import { useBIStore } from '@/shared/analytics';
 import { useText } from '@/entities/company';
 import styles from './CoverageSelector.module.css';
 
@@ -23,19 +25,44 @@ export function CoverageSelector() {
   const documentNumber = useSessionStore((s) => s.documentNumber);
 
   const [loading, setLoading] = useState(true);
+  const track = useBIStore((s) => s.track);
+  const showAlert = useAlertModalStore((s) => s.showAlert);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
-    getQuote({ plate, documentType, documentNumber }).then((result) => {
-      if (!active) return;
-      setCoverages(result.coverages);
-      setLoading(false);
-    });
+    getQuote({ plate, documentType, documentNumber })
+      .then((result) => {
+        if (!active) return;
+        setCoverages(result.coverages);
+        setLoading(false);
+        track('budget_calculated', { optionsCount: result.coverages.length });
+      })
+      .catch(() => {
+        // Without this the spinner would spin forever on a failed quote.
+        if (!active) return;
+        setLoading(false);
+        track('wizard_error', { step: 'quote', message: 'quote failed' });
+        showAlert(
+          'No pudimos calcular tu cotización',
+          'Ocurrió un problema. Intentá de nuevo en unos segundos.',
+        );
+      });
     return () => {
       active = false;
     };
-  }, [plate, documentType, documentNumber, setCoverages]);
+  }, [plate, documentType, documentNumber, setCoverages, track, showAlert]);
+
+  // Funnel step 3 completes when a coverage is picked, not when it is shown.
+  const handleSelect = (coverageId: string) => {
+    const coverage = coverages.find((c) => c.id === coverageId);
+    track('product_selected', {
+      productId: coverageId,
+      productName: coverage?.name,
+      amount: coverage?.pricePerYear,
+    });
+    selectCoverage(coverageId);
+  };
 
   return (
     <section>
@@ -54,7 +81,7 @@ export function CoverageSelector() {
               key={coverage.id}
               coverage={coverage}
               selected={coverage.id === selectedId}
-              onSelect={selectCoverage}
+              onSelect={handleSelect}
             />
           ))}
         </div>
