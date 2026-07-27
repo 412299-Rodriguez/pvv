@@ -172,6 +172,12 @@ Colas: `pvv_emission_queue` (worker principal), `pvv_emission_dlq` (dead letter)
 - [x] **pvv-admin analytics** — embudo de conversión, tabla de leads con filtros,
       exportación y recupero de abandonos
 - [ ] **HU-11 Mercado Pago real** — reemplazar el mock por preferencia y webhook reales
+- [ ] **HU-12 Recuperación de leads por email** — le da funcionalidad real al botón
+      **Recuperar** de la tabla de leads, que hoy solo abre el cliente de correo del
+      operador. **Solo por email y solo a los leads que dejaron sus datos**: sin
+      dirección de correo no hay recupero posible y la acción no se ofrece. Incluye
+      envío desde el backend, plantilla configurable por compañía y registro de a
+      quién ya se contactó. Detalle en `docs/arquitectura-pvv.md` §11.2
 - [ ] **Testing** — camino crítico (ingress, reintentos/DLQ de emisión, pagos, proyección de leads)
 - [ ] **Sección de infraestructura para el superadmin** — rutas de ingress y punteros de
       servicios en Redis, separada de la configuración por inquilino
@@ -260,6 +266,26 @@ queue.OnMessage(channelMessage => HandleAsync(channelMessage.Message, ct));
 - SignalR / WebSockets
 - HMAC validation en BFF
 - Múltiples workers de emisión (solo uno: EmissionWorker)
+- Recupero de leads por cualquier canal que no sea email (nada de SMS ni llamadas),
+  y recupero de leads que no dejaron datos de contacto
+
+---
+
+## Limitación conocida — borrar una compañía no borra sus leads
+
+Al eliminar una compañía se borran en cascada su configuración, su historial y sus
+operadores: todo eso vive en la misma base SQL. **Sus leads sobreviven**, porque
+viven en el MongoDB de pvv-bff — otro servicio, otro motor, y ninguna transacción
+cruza esa frontera.
+
+No es un olvido: es la consecuencia directa de que cada servicio sea dueño de sus
+datos. Ese aislamiento es lo que permite desplegarlos por separado, y el precio es
+que un borrado que abarca a más de uno deja de ser atómico. La salida idiomática
+sería publicar un evento `CompanyDeleted` y que pvv-bff limpie lo suyo al consumirlo
+(consistencia eventual); la alternativa es dejarlos como registro histórico. Se
+documenta en vez de resolverse porque la decisión depende de si los leads son dato
+operativo o histórico, que es una pregunta de negocio. Desarrollado en
+`docs/arquitectura-pvv.md` §11.1.
 
 ---
 

@@ -649,8 +649,10 @@ React 19, TypeScript 5 (strict), Vite 6, Tailwind CSS v4, Zustand, React Router.
   forma de contacto no hay nada que recuperar
 - El modal arma el mensaje con lo que el lead ya contó (patente, vehículo, producto y
   precio cotizado) e incluye el link de vuelta al portal
-- El envío sale por el cliente de correo del operador vía `mailto:`, no por un SMTP
-  propio: así la respuesta le llega a su bandeja y el mensaje sale de su dirección real
+- **Estado actual:** el envío sale por el cliente de correo del operador vía `mailto:`,
+  así la respuesta le llega a su bandeja y el mensaje sale de su dirección real
+- **Alcance planificado (HU-12):** envío real desde el backend, con plantilla
+  configurable por compañía y registro de qué lead ya fue contactado. Ver §11.2
 
 ---
 
@@ -766,7 +768,63 @@ queue.OnMessage(channelMessage => HandleAsync(channelMessage.Message, ct));
 - **`JsonStringEnumConverter`** registrado en `AddControllers().AddJsonOptions(...)` para enums en el body.
 - **`IUnitOfWork`** (abstracción en Application) para `SaveChangesAsync` + `ExecuteInTransactionAsync`,
   evitando que los handlers dependan de EF Core directamente.
-- **JWT**: el `JwtService` (pvv-config) firma HS256 con claims `sub`, `companyId`, `username` (exp 8h).
-  El BFF validará esos mismos tokens (mismo `Secret`/`Issuer`).
+- **JWT**: el `JwtService` (pvv-config) firma HS256 con claims `sub`, `role`, `username`,
+  `companyId` y `companyToken` (exp 8h). Los dos últimos solo para operadores de compañía;
+  un SystemAdmin no lleva ninguno. El BFF valida esos mismos tokens (mismo `Secret`/`Issuer`)
+  y acota las consultas de leads por el claim `companyToken`.
 - **`HashedCompanyId`**: AES-256-CBC (IV aleatorio prependido, base64 URL-safe). El BFF lo recibe del
   frontend y lo usa para leer config vía `GET /api/configurations/internal/{hashedCompanyId}/{type}`.
+
+---
+
+## 11. Limitaciones conocidas y alcance futuro
+
+### 11.1 Borrar una compañía no borra sus leads
+
+Al eliminar una compañía desde pvv-admin se borran en cascada **su configuración, su
+historial de configuración y sus operadores** — todo eso vive en la misma base SQL y
+la cascada la resuelve el repositorio. Pero **sus leads sobreviven**: viven en el
+MongoDB de pvv-bff, en otro servicio y en otro motor, y no hay transacción ni cascada
+que cruce esa frontera.
+
+No es un olvido, es una consecuencia directa de la arquitectura. Cada servicio es
+dueño de sus datos y nadie escribe en la base de otro; ese aislamiento es lo que
+permite que los servicios evolucionen y se desplieguen por separado, y el precio es
+que un borrado que abarca a más de uno deja de ser atómico.
+
+Las opciones reales para resolverlo, si alguna vez hiciera falta:
+
+- **Publicar un evento `CompanyDeleted`** y que pvv-bff limpie lo suyo al consumirlo.
+  Es la salida idiomática en microservicios: consistencia eventual en vez de
+  transacción distribuida. Ya existe RabbitMQ, así que el costo es acotado.
+- **Dejar los leads huérfanos a propósito** y filtrarlos al leer. Defendible si se
+  los considera registro histórico: la compañía se dio de baja, pero lo que pasó
+  pasó.
+
+Se documenta antes que resolverse porque en el alcance de este trabajo dar de baja
+una compañía es una operación excepcional, y porque la decisión correcta depende de
+si los leads son dato operativo o registro histórico — una pregunta de negocio, no
+técnica.
+
+### 11.2 HU-12 — Recuperación de leads por email
+
+El botón **Recuperar** de la tabla de leads hoy arma el mensaje y lo abre en el
+cliente de correo del operador (`mailto:`). El alcance planificado, **después de
+HU-11**, es convertirlo en una funcionalidad completa del sistema:
+
+- **Solo por email, y solo a quien dejó sus datos.** Es la regla que define el
+  alcance: un lead sin dirección de correo no es recuperable y no debe ofrecer la
+  acción. No hay SMS, ni llamadas, ni notificaciones — un solo canal, bien hecho.
+- **Envío real desde el backend**, con la plantilla ya poblada con lo que el lead
+  contó: patente, vehículo, producto y precio cotizado, y el link de vuelta al portal
+  de su compañía.
+- **Plantilla configurable por compañía**, en la misma línea que el resto de la
+  personalización por inquilino (asunto y cuerpo, con marcadores para los datos del
+  lead).
+- **Registro de contacto sobre el lead**: cuándo se lo contactó y quién lo hizo, para
+  no escribirle dos veces y para poder medir si el recupero sirve.
+
+Consideraciones a resolver al implementarlo: qué proveedor de envío se usa y dónde
+viven sus credenciales (no en la configuración multi-tenant, que es del operador),
+qué pasa con los rebotes, y que el consentimiento para contactar está atado a los
+términos que el comprador aceptó en el paso 1 del wizard.
