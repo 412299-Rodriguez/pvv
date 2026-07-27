@@ -1,5 +1,4 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
 
 import {
   createCompany,
@@ -8,6 +7,7 @@ import {
   updateCompany,
   type Company,
 } from '@/entities/company'
+import { portalUrl } from '@/shared/lib'
 import { Button, Card, Field, inputClass } from '@/shared/ui'
 
 export function CompaniesPage() {
@@ -19,6 +19,7 @@ export function CompaniesPage() {
   const [cuit, setCuit] = useState('')
   const [creating, setCreating] = useState(false)
 
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editCuit, setEditCuit] = useState('')
@@ -52,6 +53,13 @@ export function CompaniesPage() {
     } finally {
       setCreating(false)
     }
+  }
+
+  const copyPortalLink = async (company: Company) => {
+    const url = portalUrl(company.hashedCompanyId)
+    if (!url) return
+    await navigator.clipboard.writeText(url)
+    setCopiedId(company.companyId)
   }
 
   const startEdit = (company: Company) => {
@@ -170,12 +178,11 @@ export function CompaniesPage() {
                     </td>
                     <td className="py-3">
                       <div className="flex items-center justify-end gap-3">
-                        <Link
-                          to={`/companias/${company.companyId}`}
-                          className="font-semibold text-blue-600 hover:underline"
-                        >
-                          Configurar
-                        </Link>
+                        {/* The platform admin hands this link to the company;
+                            it is the only thing it needs from the tenant's side. */}
+                        <Button variant="ghost" onClick={() => copyPortalLink(company)}>
+                          {copiedId === company.companyId ? 'Copiado' : 'Copiar portal'}
+                        </Button>
                         <Button variant="secondary" onClick={() => startEdit(company)}>
                           Editar
                         </Button>

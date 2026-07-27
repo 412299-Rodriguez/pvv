@@ -5,11 +5,6 @@ export function isRecoverable(lead: LeadListItem): boolean {
   return lead.status === 'abandoned' && Boolean(lead.email)
 }
 
-/** The portal URL the buyer would land on, or null if we don't know the tenant. */
-export function portalUrl(companyToken: string | null, baseUrl: string): string | null {
-  return companyToken ? `${baseUrl}/?c=${encodeURIComponent(companyToken)}` : null
-}
-
 export interface RecoveryDraft {
   subject: string
   body: string

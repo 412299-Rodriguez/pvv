@@ -35,6 +35,22 @@ public sealed class MongoLeadQueryStore : ILeadQueryStore
             {
                 { "byStep", GroupBy("$" + nameof(Lead.LastStep)) },
                 { "byStatus", GroupBy("$" + nameof(Lead.Status)) },
+                // Where each journey ended, and how it ended: the leads table is
+                // grouped by exactly this.
+                { "byStepStatus", new BsonArray
+                    {
+                        new BsonDocument("$group", new BsonDocument
+                        {
+                            { "_id", new BsonDocument
+                                {
+                                    { "step", "$" + nameof(Lead.LastStep) },
+                                    { "status", "$" + nameof(Lead.Status) },
+                                }
+                            },
+                            { "count", new BsonDocument("$sum", 1) },
+                        }),
+                    }
+                },
             }),
         };
 
@@ -75,7 +91,8 @@ public sealed class MongoLeadQueryStore : ILeadQueryStore
             Completed: completed,
             PoliciesIssued: policiesIssued,
             OverallConversion: Percentage(completed, totalLeads),
-            Steps: steps);
+            Steps: steps,
+            StoppedAt: ReadStepBreakdown(result));
     }
 
     public async Task<PagedLeadsDto> GetLeadsAsync(
@@ -166,6 +183,44 @@ public sealed class MongoLeadQueryStore : ILeadQueryStore
         }
 
         return counts;
+    }
+
+    /// <summary>Pivots the (step, status) pairs into one row per milestone.</summary>
+    private static List<LeadStepBreakdownDto> ReadStepBreakdown(BsonDocument? result)
+    {
+        var byStep = new Dictionary<int, Dictionary<string, long>>();
+
+        if (result is not null
+            && result.TryGetValue("byStepStatus", out var facet)
+            && facet.IsBsonArray)
+        {
+            foreach (var entry in facet.AsBsonArray.OfType<BsonDocument>())
+            {
+                if (entry.GetValue("_id", BsonNull.Value) is not BsonDocument key) continue;
+
+                var step = key.GetValue("step", 0).ToInt32();
+                var status = key.GetValue("status", BsonNull.Value);
+
+                if (!byStep.TryGetValue(step, out var statuses))
+                {
+                    statuses = new Dictionary<string, long>(StringComparer.Ordinal);
+                    byStep[step] = statuses;
+                }
+
+                statuses[status.IsBsonNull ? string.Empty : status.ToString()!] =
+                    entry.GetValue("count", 0).ToInt64();
+            }
+        }
+
+        return byStep
+            .OrderBy(pair => pair.Key)
+            .Select(pair => new LeadStepBreakdownDto(
+                Step: pair.Key,
+                Active: Count(pair.Value, LeadStatus.Active),
+                Abandoned: Count(pair.Value, LeadStatus.Abandoned),
+                Completed: Count(pair.Value, LeadStatus.Completed),
+                Total: pair.Value.Values.Sum()))
+            .ToList();
     }
 
     private static long Count(Dictionary<string, long> counts, string key) =>

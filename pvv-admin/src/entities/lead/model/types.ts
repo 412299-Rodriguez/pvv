@@ -23,6 +23,19 @@ export interface LeadFunnelStep {
   conversionFromPrevious: number
 }
 
+/**
+ * Leads whose journey ended AT a milestone, split by outcome. Unlike
+ * `LeadFunnelStep.reached` this does not accumulate — it is what the leads table
+ * is grouped by.
+ */
+export interface LeadStepBreakdown {
+  step: number
+  active: number
+  abandoned: number
+  completed: number
+  total: number
+}
+
 export interface LeadFunnel {
   totalLeads: number
   active: number
@@ -31,6 +44,7 @@ export interface LeadFunnel {
   policiesIssued: number
   overallConversion: number
   steps: LeadFunnelStep[]
+  stoppedAt: LeadStepBreakdown[]
 }
 
 export interface LeadListItem {
@@ -59,13 +73,14 @@ export interface PagedLeads {
   pageSize: number
 }
 
-/** Query filters shared by the funnel and the table. */
+/**
+ * Query filters shared by the funnel and the table. There is no company filter:
+ * the BFF scopes every read to the company inside the caller's signed token.
+ */
 export interface LeadFilters {
   /** ISO date; omitted means "since the beginning". */
   from?: string
   to?: string
   lastStep?: number
   status?: LeadStatus
-  /** SystemAdmin only — an operator is pinned to its own company by its token. */
-  companyToken?: string
 }

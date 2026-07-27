@@ -10,10 +10,10 @@ using PvvConfig.Domain.Enums;
 namespace PvvConfig.Infrastructure.Persistence;
 
 /// <summary>
-/// Seeds development data. The system admin is ensured on every startup; the demo
-/// company is seeded once with a FIXED id (so its hashed portal token is stable
-/// across reseeds) and is never recreated if it already exists, so companies
-/// created from pvv-admin persist.
+/// Seeds development data. The system admin is ensured on every startup; the
+/// showcase company (SeguCor, with its own operator) is seeded once with a FIXED
+/// id — so its hashed portal token is stable across reseeds — and is never
+/// recreated if it already exists, so companies created from pvv-admin persist.
 /// </summary>
 public static class ConfigDbSeeder
 {
@@ -61,7 +61,7 @@ public static class ConfigDbSeeder
         {
             CompanyId = DemoCompanyId,
             HashedCompanyId = encryption.Encrypt(DemoCompanyId.ToString()),
-            Name = "Aseguradora Demo",
+            Name = "SeguCor",
             CUIT = "30-12345678-9",
             IsActive = true,
             CreatedAt = now
@@ -71,8 +71,8 @@ public static class ConfigDbSeeder
         {
             OperatorId = Guid.NewGuid(),
             CompanyId = DemoCompanyId,
-            Username = "admin@demo.com",
-            PasswordHash = passwordHasher.Hash("Demo123!"),
+            Username = "admin@segucor.com",
+            PasswordHash = passwordHasher.Hash("Segu123!"),
             Role = OperatorRole.CompanyOperator,
             IsActive = true,
             CreatedAt = now

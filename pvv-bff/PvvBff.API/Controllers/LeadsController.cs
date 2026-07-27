@@ -10,13 +10,17 @@ namespace PvvBff.API.Controllers;
 /// authenticated operator, so these endpoints sit outside <c>/api/ingress</c> and
 /// its anonymous pipeline (Turnstile, anonymous session, rate limiting) and are
 /// guarded by the JWT that pvv-config issues instead.
+///
+/// Leads belong to the company that produced them. Access comes from the signed
+/// companyToken claim and nothing else — there is no way to ask for another
+/// company's leads, and the platform administrator (who carries no such claim)
+/// has no reach here either.
 /// </summary>
 [ApiController]
 [Route("api/leads")]
 [Authorize]
 public sealed class LeadsController : ControllerBase
 {
-    private const string SystemAdminRole = "SystemAdmin";
     private const string CompanyTokenClaim = "companyToken";
 
     private readonly ISender _mediator;
@@ -28,10 +32,10 @@ public sealed class LeadsController : ControllerBase
     public async Task<IActionResult> GetFunnel(
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
-        [FromQuery] string? companyToken,
         CancellationToken ct)
     {
-        if (!TryResolveCompanyToken(companyToken, out var scope))
+        var scope = CompanyScope();
+        if (scope is null)
             return Forbid();
 
         var filter = new LeadQueryFilter(scope, from, to);
@@ -45,12 +49,12 @@ public sealed class LeadsController : ControllerBase
         [FromQuery] DateTime? to,
         [FromQuery] int? lastStep,
         [FromQuery] string? status,
-        [FromQuery] string? companyToken,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
-        if (!TryResolveCompanyToken(companyToken, out var scope))
+        var scope = CompanyScope();
+        if (scope is null)
             return Forbid();
 
         var filter = new LeadQueryFilter(scope, from, to, lastStep, status);
@@ -58,26 +62,12 @@ public sealed class LeadsController : ControllerBase
     }
 
     /// <summary>
-    /// Decides which company the caller may read. A company operator is pinned to
-    /// the token inside its own JWT — the query string cannot widen that. Only a
-    /// SystemAdmin may name a company, or omit it to span all of them.
+    /// The company whose leads the caller may read, taken from its signed token.
+    /// Null means no company owns this caller, and therefore no leads are visible.
     /// </summary>
-    private bool TryResolveCompanyToken(string? requested, out string? scope)
+    private string? CompanyScope()
     {
         var claim = User.FindFirst(CompanyTokenClaim)?.Value;
-        if (!string.IsNullOrWhiteSpace(claim))
-        {
-            scope = claim;
-            return true;
-        }
-
-        if (User.IsInRole(SystemAdminRole))
-        {
-            scope = requested;
-            return true;
-        }
-
-        scope = null;
-        return false;
+        return string.IsNullOrWhiteSpace(claim) ? null : claim;
     }
 }

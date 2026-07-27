@@ -9,7 +9,6 @@ function toParams(filters: LeadFilters): Record<string, string | number> {
   if (filters.to) params.to = filters.to
   if (filters.lastStep !== undefined) params.lastStep = filters.lastStep
   if (filters.status) params.status = filters.status
-  if (filters.companyToken) params.companyToken = filters.companyToken
   return params
 }
 

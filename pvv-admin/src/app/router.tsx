@@ -6,7 +6,6 @@ import { LeadsPage } from '@/pages/leads/LeadsPage'
 import { AppearancePage } from '@/pages/appearance/AppearancePage'
 import { ProductsPage } from '@/pages/products/ProductsPage'
 import { CompaniesPage } from '@/pages/companies/CompaniesPage'
-import { CompanyDetailPage } from '@/pages/company-detail/CompanyDetailPage'
 import { OperatorsPage } from '@/pages/operators/OperatorsPage'
 
 import { ProtectedLayout, HomeRedirect, RoleRoute } from './guards'
@@ -56,14 +55,6 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute allow="SystemAdmin">
             <CompaniesPage />
-          </RoleRoute>
-        ),
-      },
-      {
-        path: 'companias/:id',
-        element: (
-          <RoleRoute allow="SystemAdmin">
-            <CompanyDetailPage />
           </RoleRoute>
         ),
       },

@@ -6,5 +6,6 @@ export type {
   LeadFunnelStep,
   LeadListItem,
   LeadStatus,
+  LeadStepBreakdown,
   PagedLeads,
 } from './model/types'

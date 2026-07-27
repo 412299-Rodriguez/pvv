@@ -10,32 +10,24 @@ import { FunnelChart } from '@/widgets/funnel-chart'
 /** The dashboard reloads itself so a screen left open does not go stale. */
 const REFRESH_MS = 5 * 60 * 1000
 
-interface LeadDashboardProps {
-  /**
-   * SystemAdmin only, to scope the view to one company. An operator omits it:
-   * its own company travels inside its token and cannot be overridden.
-   */
-  companyToken?: string
-}
-
-/** Conversion funnel and headline numbers for one company's portal. */
-export function LeadDashboard({ companyToken }: LeadDashboardProps) {
+/**
+ * Conversion funnel and headline numbers for the operator's own portal. Which
+ * company that is comes from the token, so there is nothing to pass in.
+ */
+export function LeadDashboard() {
   const [preset, setPreset] = useState<RangePreset>('30d')
   const [error, setError] = useState<string | null>(null)
 
   // The loaded slice is tagged with the filter it belongs to, so a pending
   // change shows the previous numbers dimmed instead of a skeleton flash.
-  const filterKey = `${preset}|${companyToken ?? ''}`
+  const filterKey = preset
   const [loaded, setLoaded] = useState<{ key: string; funnel: LeadFunnel } | null>(null)
 
   useEffect(() => {
     let active = true
 
     const load = () => {
-      const filters: LeadFilters = {
-        ...presetToFilter(preset),
-        ...(companyToken ? { companyToken } : {}),
-      }
+      const filters: LeadFilters = presetToFilter(preset)
 
       getLeadFunnel(filters)
         .then((funnel) => {
@@ -54,7 +46,7 @@ export function LeadDashboard({ companyToken }: LeadDashboardProps) {
       active = false
       window.clearInterval(timer)
     }
-  }, [filterKey, preset, companyToken])
+  }, [filterKey, preset])
 
   const funnel = loaded?.funnel ?? null
   const stale = loaded !== null && loaded.key !== filterKey
