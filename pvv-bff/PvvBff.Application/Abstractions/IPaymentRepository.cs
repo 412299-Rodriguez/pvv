@@ -19,6 +19,19 @@ public interface IPaymentRepository
     Task<IReadOnlyList<PaymentTransaction>> MarkAbandonedAsync(DateTime olderThan, CancellationToken ct);
 
     /// <summary>
+    /// Marks the transaction Confirmed and returns whether this caller was the one
+    /// that did it — the guard against publishing two emission jobs for one
+    /// payment, now that a webhook and two reconciliation paths can all confirm it.
+    ///
+    /// Matches anything that is not ALREADY Confirmed rather than only Pending, on
+    /// purpose. A buyer whose first card is rejected retries with another one, and a
+    /// cash coupon can be paid after the abandonment sweep has given up on it: both
+    /// arrive as an approval for a transaction that is Failed or Abandoned, and
+    /// refusing those would take money without issuing a policy.
+    /// </summary>
+    Task<bool> TryMarkConfirmedAsync(string id, DateTime confirmedAt, CancellationToken ct);
+
+    /// <summary>
     /// Claims the right to project this transaction's emission outcome onto its
     /// lead, and returns whether the caller won it.
     ///

@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -41,7 +42,7 @@ public sealed class MercadoPagoGateway : IPaymentGateway
         // One URL for all three outcomes. The result page does not trust what
         // Mercado Pago appends to it anyway — it re-asks our own backend for the
         // real state — so there is nothing to gain from three separate landings.
-        var backUrl = BuildBackUrl(request.TransactionId);
+        var backUrl = BuildBackUrl(request.TransactionId, request.CompanyToken);
 
         var body = new PreferenceRequest
         {
@@ -106,15 +107,80 @@ public sealed class MercadoPagoGateway : IPaymentGateway
         return new PaymentPreferenceResult(dto.Id, initPoint);
     }
 
+    public async Task<GatewayPayment?> GetPaymentAsync(string providerPaymentId, CancellationToken ct)
+    {
+        using var message = new HttpRequestMessage(
+            HttpMethod.Get, $"/v1/payments/{Uri.EscapeDataString(providerPaymentId)}");
+        Authorize(message);
+
+        using var response = await _http.SendAsync(message, ct);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return null;
+
+        response.EnsureSuccessStatusCode();
+        var dto = await response.Content.ReadFromJsonAsync<PaymentResponse>(JsonOptions, ct);
+        return dto is null ? null : Map(dto);
+    }
+
+    public async Task<GatewayPayment?> FindPaymentByTransactionAsync(string transactionId, CancellationToken ct)
+    {
+        // Newest first, so results[0] is the most recent attempt.
+        using var message = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/v1/payments/search?external_reference={Uri.EscapeDataString(transactionId)}" +
+            "&sort=date_created&criteria=desc");
+        Authorize(message);
+
+        using var response = await _http.SendAsync(message, ct);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return null;
+
+        response.EnsureSuccessStatusCode();
+        var dto = await response.Content.ReadFromJsonAsync<PaymentSearchResponse>(JsonOptions, ct);
+        if (dto?.Results is not { Length: > 0 } results)
+            return null;
+
+        // One preference can accumulate several payments: a buyer whose card is
+        // rejected simply tries another one, and each attempt is its own payment.
+        // An approval anywhere in that history is the outcome that matters —
+        // otherwise the latest attempt is the one that describes the state.
+        var payments = results.Select(Map).ToArray();
+        return Array.Find(payments, p => p.Outcome == PaymentOutcome.Approved) ?? payments[0];
+    }
+
+    private static GatewayPayment Map(PaymentResponse dto) =>
+        new(
+            dto.Id.ToString(),
+            dto.ExternalReference ?? string.Empty,
+            MapOutcome(dto.Status),
+            dto.Status ?? string.Empty);
+
+    private static PaymentOutcome MapOutcome(string? status) => status switch
+    {
+        "approved" or "authorized" => PaymentOutcome.Approved,
+        "rejected" or "cancelled" => PaymentOutcome.Rejected,
+        // pending / in_process / in_mediation are still in flight. refunded and
+        // charged_back reverse a payment whose policy was already issued, which is
+        // out of scope for HU-11 — and must not be mistaken for a rejection, which
+        // would be a wrong answer rather than an incomplete one.
+        _ => PaymentOutcome.Pending,
+    };
+
     private void Authorize(HttpRequestMessage message) =>
         message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.AccessToken);
 
     /// <summary>
-    /// Where Mercado Pago returns the buyer. Carries the transaction id because
-    /// the browser comes back with no session state worth trusting.
+    /// Where Mercado Pago returns the buyer. Carries the transaction id, because
+    /// the browser comes back with no state worth trusting, and the company token,
+    /// because Mercado Pago owns this redirect and the frontend cannot add it.
     /// </summary>
-    private string BuildBackUrl(string transactionId) =>
-        $"{_options.BackUrlBase.TrimEnd('/')}/?tx={Uri.EscapeDataString(transactionId)}";
+    private string BuildBackUrl(string transactionId, string? companyToken)
+    {
+        var url = $"{_options.BackUrlBase.TrimEnd('/')}/?tx={Uri.EscapeDataString(transactionId)}";
+        return string.IsNullOrWhiteSpace(companyToken)
+            ? url
+            : $"{url}&c={Uri.EscapeDataString(companyToken)}";
+    }
 
     /// <summary>
     /// Mercado Pago wants ISO 8601 with milliseconds AND an explicit offset;
@@ -189,5 +255,24 @@ public sealed class MercadoPagoGateway : IPaymentGateway
 
         [JsonPropertyName("sandbox_init_point")]
         public string SandboxInitPoint { get; set; } = string.Empty;
+    }
+
+    private sealed class PaymentResponse
+    {
+        [JsonPropertyName("id")]
+        public long Id { get; set; }
+
+        [JsonPropertyName("status")]
+        public string? Status { get; set; }
+
+        /// <summary>Our transaction id, set when the preference was created.</summary>
+        [JsonPropertyName("external_reference")]
+        public string? ExternalReference { get; set; }
+    }
+
+    private sealed class PaymentSearchResponse
+    {
+        [JsonPropertyName("results")]
+        public PaymentResponse[]? Results { get; set; }
     }
 }

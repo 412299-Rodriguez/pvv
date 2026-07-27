@@ -29,6 +29,13 @@
       "targetService": "pvv-bff"
     },
     {
+      "hash": "PAYMENT_SYNC",
+      "method": "POST",
+      "endpoint": "internal://payment-sync",
+      "timeoutSeconds": 20,
+      "targetService": "pvv-bff"
+    },
+    {
       "hash": "EMISSION_STATUS",
       "method": "POST",
       "endpoint": "internal://emission-status",

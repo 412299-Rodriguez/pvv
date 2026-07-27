@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PvvBff.API.Models;
+using PvvBff.Application.Abstractions;
 using PvvBff.Application.Payments;
 
 namespace PvvBff.API.Controllers;
@@ -21,16 +22,27 @@ public sealed class PaymentsController : ControllerBase
     public PaymentsController(ISender mediator) => _mediator = mediator;
 
     /// <summary>
-    /// Payment confirmation webhook. On the first "approved" notification it
-    /// confirms the transaction and publishes the emission job. Idempotent.
+    /// Confirmation webhook for the MOCK gateway — called by our own mock-checkout
+    /// page. On the first approval it confirms the transaction and publishes the
+    /// emission job. Idempotent.
+    ///
+    /// The real Mercado Pago notification does NOT land here: its payload carries a
+    /// provider payment id rather than ours and it is signed, so it gets its own
+    /// endpoint. Keeping the two apart is what lets the mock keep working.
     /// </summary>
     [HttpPost("webhook")]
     [AllowAnonymous]
     public async Task<IActionResult> Webhook([FromBody] PaymentWebhookRequest request, CancellationToken ct)
     {
-        // TODO HU-11: validate the real Mercado Pago webhook signature here.
+        // The mock only ever reports one of two things, so anything that is not an
+        // approval is a rejection. A real provider also has in-flight states, which
+        // is why PaymentOutcome has three cases and not two.
+        var outcome = string.Equals(request.Status, "approved", StringComparison.OrdinalIgnoreCase)
+            ? PaymentOutcome.Approved
+            : PaymentOutcome.Rejected;
+
         var result = await _mediator.Send(
-            new ConfirmPaymentCommand(request.TransactionId, request.Status), ct);
+            new ConfirmPaymentCommand(request.TransactionId, outcome), ct);
 
         if (!result.Found)
             return NotFound(new { transactionId = request.TransactionId, error = "Unknown transaction." });

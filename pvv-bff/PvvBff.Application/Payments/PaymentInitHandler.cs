@@ -48,7 +48,7 @@ public sealed class PaymentInitHandler : IInternalIngressHandler
             : $"Seguro para {vehicleTitle}";
 
         var preference = await _gateway.CreatePreferenceAsync(
-            new PaymentPreferenceRequest(transactionId, amount, description), ct);
+            new PaymentPreferenceRequest(transactionId, amount, description, context.CompanyId), ct);
 
         await _repository.AddAsync(
             new PaymentTransaction

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { getEmissionStatus } from '@/shared/api/ingress';
+import { getEmissionStatus, syncPayment } from '@/shared/api/ingress';
 import { requestContext } from '@/shared/api';
 import { EmissionResult, type EmissionTicket } from '@/features/policy-emission';
 import { formatDate } from '@/shared/lib';
@@ -87,7 +87,14 @@ export function PaymentResultPage() {
       }
     };
 
-    void poll();
+    // Reconcile first, then poll. The payment may already be approved on the
+    // provider's side and still unknown here — their notification cannot reach a
+    // developer's machine, and in production it can simply arrive after the buyer
+    // does. Polling before asking would just watch a Pending transaction.
+    void syncPayment(tx).then(() => {
+      if (active) void poll();
+    });
+
     return () => {
       active = false;
       window.clearTimeout(timer);

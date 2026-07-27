@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<IInternalIngressHandler, PlateSearchHandler>();
         services.AddScoped<IInternalIngressHandler, QuoteHandler>();
         services.AddScoped<IInternalIngressHandler, BudgetCalcHandler>();
+        services.AddScoped<IInternalIngressHandler, PaymentSyncHandler>();
         services.AddScoped<IInternalIngressHandler, EmissionStatusHandler>();
         services.AddScoped<IInternalIngressHandler, LeadEventHandler>();
 

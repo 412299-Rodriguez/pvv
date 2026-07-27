@@ -23,6 +23,25 @@ public sealed class MongoPaymentRepository : IPaymentRepository
     public Task UpdateAsync(PaymentTransaction transaction, CancellationToken ct) =>
         _collection.ReplaceOneAsync(t => t.Id == transaction.Id, transaction, cancellationToken: ct);
 
+    // Compare-and-set: the filter excludes transactions that are already Confirmed,
+    // so of several concurrent approvals exactly one modifies the document and only
+    // that one publishes an emission job. Deliberately "not Confirmed" rather than
+    // "is Pending" — see the interface for why a Failed or Abandoned transaction
+    // must still be allowed to become Confirmed.
+    public async Task<bool> TryMarkConfirmedAsync(string id, DateTime confirmedAt, CancellationToken ct)
+    {
+        var result = await _collection.UpdateOneAsync(
+            Builders<PaymentTransaction>.Filter.And(
+                Builders<PaymentTransaction>.Filter.Eq(t => t.Id, id),
+                Builders<PaymentTransaction>.Filter.Ne(t => t.Status, PaymentStatus.Confirmed)),
+            Builders<PaymentTransaction>.Update
+                .Set(t => t.Status, PaymentStatus.Confirmed)
+                .Set(t => t.ConfirmedAt, confirmedAt),
+            cancellationToken: ct);
+
+        return result.ModifiedCount == 1;
+    }
+
     // Targeted update rather than a full replace: the emission worker writes its
     // own fields on this same document. Matching only an unstamped transaction
     // makes this a compare-and-set — exactly one concurrent caller modifies it.

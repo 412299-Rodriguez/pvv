@@ -6,6 +6,7 @@ export {
   emitPolicy,
   createBudget,
   startPayment,
+  syncPayment,
   getEmissionStatus,
   confirmMockPayment,
   sendLeadEvent,
@@ -28,6 +29,7 @@ export type {
   CreateBudgetResponse,
   StartPaymentRequest,
   StartPaymentResponse,
+  PaymentSyncResponse,
   EmissionStatusResponse,
   LeadEventPayload,
 } from './contracts';

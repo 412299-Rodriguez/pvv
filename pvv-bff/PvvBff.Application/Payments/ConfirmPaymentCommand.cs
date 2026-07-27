@@ -6,22 +6,23 @@ using PvvBff.Domain.Payments;
 
 namespace PvvBff.Application.Payments;
 
-/// <summary>Apply a payment provider notification to a transaction.</summary>
-public sealed record ConfirmPaymentCommand(string TransactionId, string Status)
+/// <summary>Apply what the provider says about a payment to our transaction.</summary>
+public sealed record ConfirmPaymentCommand(string TransactionId, PaymentOutcome Outcome)
     : IRequest<ConfirmPaymentResult>;
 
 public sealed record ConfirmPaymentResult(bool Found, bool Published, string Status);
 
 /// <summary>
-/// Confirms (or fails) a payment from a webhook notification. On the first
-/// "approved" notification it marks the transaction Confirmed and publishes an
-/// EmissionMessage to RabbitMQ. Idempotent: a repeated approval does NOT
-/// re-publish (so the user never gets two policies).
+/// Confirms (or fails) a payment. On the first approval it marks the transaction
+/// Confirmed and publishes an EmissionMessage to RabbitMQ.
+///
+/// Reached from three places that can all fire for the same payment: the provider's
+/// webhook, the result page's reconciliation, and the background reconciliation in
+/// the abandonment sweep. Being idempotent is therefore not a nicety — it is the
+/// only thing standing between a buyer and two policies.
 /// </summary>
 public sealed class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentCommand, ConfirmPaymentResult>
 {
-    private const string ApprovedStatus = "approved";
-
     private readonly IPaymentRepository _repository;
     private readonly IEmissionPublisher _publisher;
     private readonly ILeadProjectionService _leads;
@@ -44,26 +45,41 @@ public sealed class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentComman
         var transaction = await _repository.GetAsync(request.TransactionId, ct);
         if (transaction is null)
         {
-            _logger.LogWarning("Webhook for unknown transaction {TransactionId}", request.TransactionId);
+            _logger.LogWarning("Payment notification for unknown transaction {TransactionId}", request.TransactionId);
             return new ConfirmPaymentResult(Found: false, Published: false, Status: "not_found");
         }
 
-        // Idempotency: never publish twice for the same transaction.
+        // Cheap fast path; the authoritative guard is the compare-and-set below.
         if (transaction.Status == PaymentStatus.Confirmed)
             return new ConfirmPaymentResult(Found: true, Published: false, Status: "already_confirmed");
 
-        if (!string.Equals(request.Status, ApprovedStatus, StringComparison.OrdinalIgnoreCase))
+        // Still in flight — decide nothing and write nothing. This is where the
+        // pre-HU-11 code was wrong: it treated anything that was not "approved" as
+        // a failure, and Mercado Pago's pending/in_process (cash coupon, transfer,
+        // fraud review) would have killed sales that were about to succeed.
+        if (request.Outcome == PaymentOutcome.Pending)
+            return new ConfirmPaymentResult(Found: true, Published: false, Status: "pending");
+
+        if (request.Outcome == PaymentOutcome.Rejected)
         {
             transaction.Status = PaymentStatus.Failed;
             await _repository.UpdateAsync(transaction, ct);
             await ProjectAsync(transaction, LeadEventNames.PaymentRejected, ct);
-            _logger.LogInformation("Payment {TransactionId} marked failed ({Status})", transaction.Id, request.Status);
+            _logger.LogInformation("Payment {TransactionId} marked failed", transaction.Id);
             return new ConfirmPaymentResult(Found: true, Published: false, Status: "failed");
         }
 
+        var confirmedAt = DateTime.UtcNow;
+        if (!await _repository.TryMarkConfirmedAsync(transaction.Id, confirmedAt, ct))
+        {
+            // Another path confirmed it between our read and this write. With a
+            // webhook and two reconciliation paths in play that is a real race,
+            // not a theoretical one.
+            return new ConfirmPaymentResult(Found: true, Published: false, Status: "already_confirmed");
+        }
+
         transaction.Status = PaymentStatus.Confirmed;
-        transaction.ConfirmedAt = DateTime.UtcNow;
-        await _repository.UpdateAsync(transaction, ct);
+        transaction.ConfirmedAt = confirmedAt;
 
         await _publisher.PublishAsync(
             new EmissionMessage(
@@ -72,7 +88,7 @@ public sealed class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentComman
                 transaction.CompanyToken,
                 transaction.SessionId,
                 transaction.Amount,
-                transaction.ConfirmedAt.Value),
+                confirmedAt),
             ct);
 
         await ProjectAsync(transaction, LeadEventNames.PaymentConfirmed, ct);
