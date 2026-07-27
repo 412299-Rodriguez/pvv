@@ -4,13 +4,21 @@ import { Link, useParams } from 'react-router-dom'
 import { getCompany, type Company } from '@/entities/company'
 import { AppearanceEditor } from '@/features/edit-appearance'
 import { ProductsEditor } from '@/features/edit-products'
+import { LeadDashboard, LeadsExplorer } from '@/features/lead-analytics'
 
-type Tab = 'apariencia' | 'productos'
+type Tab = 'dashboard' | 'leads' | 'apariencia' | 'productos'
+
+const TABS: { value: Tab; label: string }[] = [
+  { value: 'dashboard', label: 'Dashboard' },
+  { value: 'leads', label: 'Leads' },
+  { value: 'apariencia', label: 'Apariencia' },
+  { value: 'productos', label: 'Productos' },
+]
 
 export function CompanyDetailPage() {
   const { id = '' } = useParams()
   const [company, setCompany] = useState<Company | null>(null)
-  const [tab, setTab] = useState<Tab>('apariencia')
+  const [tab, setTab] = useState<Tab>('dashboard')
 
   useEffect(() => {
     let active = true
@@ -33,21 +41,32 @@ export function CompanyDetailPage() {
       </div>
 
       <div className="flex gap-1 border-b border-slate-200">
-        {(['apariencia', 'productos'] as Tab[]).map((t) => (
+        {TABS.map((option) => (
           <button
-            key={t}
+            key={option.value}
             type="button"
-            onClick={() => setTab(t)}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm font-semibold capitalize transition ${
-              tab === t ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+            onClick={() => setTab(option.value)}
+            className={`-mb-px border-b-2 px-4 py-2 text-sm font-semibold transition ${
+              tab === option.value
+                ? 'border-blue-600 text-blue-700'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
-            {t}
+            {option.label}
           </button>
         ))}
       </div>
 
-      {tab === 'apariencia' ? (
+      {/* Analytics needs the portal hash, which only arrives with the company. */}
+      {tab === 'dashboard' || tab === 'leads' ? (
+        company === null ? (
+          <p className="py-12 text-center text-sm text-slate-500">Cargando compañía…</p>
+        ) : tab === 'dashboard' ? (
+          <LeadDashboard key={id} companyToken={company.hashedCompanyId} />
+        ) : (
+          <LeadsExplorer key={id} companyToken={company.hashedCompanyId} />
+        )
+      ) : tab === 'apariencia' ? (
         <AppearanceEditor key={id} companyId={id} />
       ) : (
         <ProductsEditor key={id} companyId={id} />

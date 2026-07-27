@@ -4,6 +4,7 @@ import { useSessionStore } from '@/entities/session'
 
 const OPERATOR_TABS = [
   { to: '/dashboard', label: 'Dashboard' },
+  { to: '/leads', label: 'Leads' },
   { to: '/apariencia', label: 'Apariencia' },
   { to: '/productos', label: 'Productos' },
 ]

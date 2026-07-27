@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 import { LoginPage } from '@/pages/login/LoginPage'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
+import { LeadsPage } from '@/pages/leads/LeadsPage'
 import { AppearancePage } from '@/pages/appearance/AppearancePage'
 import { ProductsPage } from '@/pages/products/ProductsPage'
 import { CompaniesPage } from '@/pages/companies/CompaniesPage'
@@ -22,6 +23,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute allow="CompanyOperator">
             <DashboardPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'leads',
+        element: (
+          <RoleRoute allow="CompanyOperator">
+            <LeadsPage />
           </RoleRoute>
         ),
       },
