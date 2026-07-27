@@ -12,7 +12,7 @@ import {
 } from '@/entities/lead'
 import { useSessionStore } from '@/entities/session'
 import { RecoveryModal } from '@/features/lead-recovery'
-import { Card, StatTile } from '@/shared/ui'
+import { Card, RefreshButton, StatTile } from '@/shared/ui'
 import { formatCount, formatPercent } from '@/shared/ui/viz'
 import { portalUrl, presetToFilter, type RangePreset } from '@/shared/lib'
 import { DateRangeFilter } from '@/widgets/date-range-filter'
@@ -60,11 +60,13 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
   const [error, setError] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
   const [recovering, setRecovering] = useState<LeadListItem | null>(null)
+  // Bumped by the refresh button; reloads both the table and the counters.
+  const [reload, setReload] = useState(0)
 
   // Used only to build the portal link inside a recovery email.
   const sessionToken = useSessionStore((s) => s.companyToken)
 
-  const filterKey = `${preset}|${step}|${outcome}|${page}`
+  const filterKey = `${preset}|${step}|${outcome}|${page}|${reload}`
   const [loaded, setLoaded] = useState<{ key: string; data: PagedLeads } | null>(null)
 
   // Counts for the tabs and the sale card. Only the date range moves them, so
@@ -106,7 +108,7 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
     return () => {
       active = false
     }
-  }, [preset])
+  }, [preset, reload])
 
   const changeFilter = (apply: () => void) => {
     apply()
@@ -164,7 +166,9 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
         />
       </div>
 
-      <DateRangeFilter value={preset} onChange={(next) => changeFilter(() => setPreset(next))} />
+      <DateRangeFilter value={preset} onChange={(next) => changeFilter(() => setPreset(next))}>
+        <RefreshButton onClick={() => setReload((n) => n + 1)} busy={stale} />
+      </DateRangeFilter>
 
       {/* Where the journey ended. */}
       <div className="mb-3 flex flex-wrap gap-1 border-b border-slate-200">

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { getLeadFunnel, type LeadFilters, type LeadFunnel } from '@/entities/lead'
-import { Card, StatTile } from '@/shared/ui'
+import { Card, RefreshButton, StatTile } from '@/shared/ui'
 import { formatCount, formatPercent } from '@/shared/ui/viz'
 import { presetToFilter, type RangePreset } from '@/shared/lib'
 import { DateRangeFilter } from '@/widgets/date-range-filter'
@@ -17,10 +17,13 @@ const REFRESH_MS = 5 * 60 * 1000
 export function LeadDashboard() {
   const [preset, setPreset] = useState<RangePreset>('30d')
   const [error, setError] = useState<string | null>(null)
+  // Bumped by the refresh button; part of the key so a manual reload dims the
+  // numbers exactly like a filter change does.
+  const [reload, setReload] = useState(0)
 
   // The loaded slice is tagged with the filter it belongs to, so a pending
   // change shows the previous numbers dimmed instead of a skeleton flash.
-  const filterKey = preset
+  const filterKey = `${preset}|${reload}`
   const [loaded, setLoaded] = useState<{ key: string; funnel: LeadFunnel } | null>(null)
 
   useEffect(() => {
@@ -46,14 +49,16 @@ export function LeadDashboard() {
       active = false
       window.clearInterval(timer)
     }
-  }, [filterKey, preset])
+  }, [filterKey, preset, reload])
 
   const funnel = loaded?.funnel ?? null
   const stale = loaded !== null && loaded.key !== filterKey
 
   return (
     <div>
-      <DateRangeFilter value={preset} onChange={setPreset} />
+      <DateRangeFilter value={preset} onChange={setPreset}>
+        <RefreshButton onClick={() => setReload((n) => n + 1)} busy={stale} />
+      </DateRangeFilter>
 
       {error ? (
         <Card className="border-red-200 bg-red-50 text-sm text-red-700">{error}</Card>
