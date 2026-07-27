@@ -65,7 +65,7 @@ export function LeadDashboard() {
       ) : null}
 
       {funnel === null ? (
-        <p className="py-12 text-center text-sm text-slate-500">Cargando métricas…</p>
+        <p className="py-12 text-center text-sm text-stone-500">Cargando métricas…</p>
       ) : (
         <div className={stale ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
           <div className="mb-6">

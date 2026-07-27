@@ -40,7 +40,7 @@ export function RecoveryModal({ lead, companyName, url, onClose }: RecoveryModal
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4"
       role="dialog"
       aria-modal="true"
       aria-label="Recuperar lead"
@@ -50,13 +50,13 @@ export function RecoveryModal({ lead, companyName, url, onClose }: RecoveryModal
         className="max-h-full w-full max-w-xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 className="text-lg font-bold text-slate-800">Recuperar este lead</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Para <span className="font-medium text-slate-700">{lead.email}</span>
+        <h2 className="text-lg font-bold text-stone-800">Recuperar este lead</h2>
+        <p className="mt-1 text-sm text-stone-500">
+          Para <span className="font-medium text-stone-700">{lead.email}</span>
           {lead.holderName ? ` · ${lead.holderName}` : ''}
         </p>
 
-        <label className="mt-4 block text-sm font-medium text-slate-600">
+        <label className="mt-4 block text-sm font-medium text-stone-600">
           Asunto
           <input
             className={`${inputClass} mt-1`}
@@ -65,7 +65,7 @@ export function RecoveryModal({ lead, companyName, url, onClose }: RecoveryModal
           />
         </label>
 
-        <label className="mt-4 block text-sm font-medium text-slate-600">
+        <label className="mt-4 block text-sm font-medium text-stone-600">
           Mensaje
           <textarea
             className={`${inputClass} mt-1 h-64 font-mono text-xs`}
@@ -84,14 +84,14 @@ export function RecoveryModal({ lead, companyName, url, onClose }: RecoveryModal
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={copyBody}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
           >
             {copied ? 'Copiado' : 'Copiar texto'}
           </button>

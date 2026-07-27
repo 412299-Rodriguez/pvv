@@ -4,7 +4,7 @@ import { LeadDashboard } from '@/features/lead-analytics'
 export function DashboardPage() {
   return (
     <div>
-      <h1 className="mb-6 text-xl font-bold text-slate-800">Dashboard</h1>
+      <h1 className="mb-6 text-2xl font-semibold tracking-tight text-stone-900">Dashboard</h1>
       <LeadDashboard />
     </div>
   )

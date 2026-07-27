@@ -13,7 +13,7 @@ export function RefreshButton({ onClick, busy = false }: { onClick: () => void; 
       onClick={onClick}
       title="Actualizar"
       aria-label="Actualizar"
-      className="rounded-lg border border-slate-300 bg-white p-2 text-slate-600 transition hover:bg-slate-50"
+      className="rounded-lg border border-stone-300 bg-white p-2 text-stone-600 transition hover:bg-stone-50"
     >
       <svg viewBox="0 0 24 24" fill="none" className={`h-5 w-5 ${busy ? 'animate-spin' : ''}`} aria-hidden>
         <path

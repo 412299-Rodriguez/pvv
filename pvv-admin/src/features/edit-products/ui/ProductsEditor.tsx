@@ -61,13 +61,13 @@ export function ProductsEditor({ companyId }: { companyId: string }) {
   }
 
   if (loading) {
-    return <p className="text-sm text-slate-500">Cargando productos…</p>
+    return <p className="text-sm text-stone-500">Cargando productos…</p>
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Productos y precios</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-stone-900">Productos y precios</h1>
         <div className="flex items-center gap-3">
           {status === 'saved' && <span className="text-sm font-medium text-green-600">Guardado ✓</span>}
           {status === 'error' && <span className="text-sm font-medium text-red-600">Error al guardar</span>}
@@ -80,7 +80,7 @@ export function ProductsEditor({ companyId }: { companyId: string }) {
       {/* Products */}
       <Card>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-bold text-slate-800">Productos</h2>
+          <h2 className="font-bold text-stone-800">Productos</h2>
           <Button
             variant="secondary"
             onClick={() =>
@@ -99,10 +99,10 @@ export function ProductsEditor({ companyId }: { companyId: string }) {
             + Agregar producto
           </Button>
         </div>
-        {products.length === 0 && <p className="text-sm text-slate-400">Sin productos.</p>}
+        {products.length === 0 && <p className="text-sm text-stone-400">Sin productos.</p>}
         <div className="space-y-3">
           {products.map((p, i) => (
-            <div key={p.ProductId} className="grid gap-3 rounded-lg border border-slate-200 p-4 sm:grid-cols-2">
+            <div key={p.ProductId} className="grid gap-3 rounded-lg border border-stone-200 p-4 sm:grid-cols-2">
               <Field label="Nombre">
                 <input value={p.Name} onChange={(e) => updateProduct(i, { Name: e.target.value })} className={inputClass} />
               </Field>
@@ -122,7 +122,7 @@ export function ProductsEditor({ companyId }: { companyId: string }) {
                   />
                 </Field>
               </div>
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <label className="flex items-center gap-2 text-sm font-medium text-stone-700">
                 <input
                   type="checkbox"
                   checked={p.IsActive}
@@ -143,7 +143,7 @@ export function ProductsEditor({ companyId }: { companyId: string }) {
       {/* Pricing rules */}
       <Card>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-bold text-slate-800">Reglas de precio</h2>
+          <h2 className="font-bold text-stone-800">Reglas de precio</h2>
           <Button
             variant="secondary"
             disabled={products.length === 0}
@@ -165,11 +165,11 @@ export function ProductsEditor({ companyId }: { companyId: string }) {
           </Button>
         </div>
         {products.length === 0 && (
-          <p className="text-sm text-slate-400">Agregá un producto primero para poder ponerle precio.</p>
+          <p className="text-sm text-stone-400">Agregá un producto primero para poder ponerle precio.</p>
         )}
         <div className="space-y-3">
           {rules.map((r, i) => (
-            <div key={r.PricingId} className="grid items-end gap-3 rounded-lg border border-slate-200 p-4 sm:grid-cols-5">
+            <div key={r.PricingId} className="grid items-end gap-3 rounded-lg border border-stone-200 p-4 sm:grid-cols-5">
               <Field label="Producto">
                 <select
                   value={r.ProductId}

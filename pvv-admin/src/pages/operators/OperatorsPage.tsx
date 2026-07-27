@@ -95,10 +95,10 @@ export function OperatorsPage() {
   // Only company operators are editable here (the SystemAdmin row is read-only).
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-800">Operadores</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-stone-900">Operadores</h1>
 
       <Card>
-        <h2 className="mb-3 font-bold text-slate-800">Nuevo operador de compañía</h2>
+        <h2 className="mb-3 font-bold text-stone-800">Nuevo operador de compañía</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           <div className="min-w-44 flex-1">
             <Field label="Usuario">
@@ -143,11 +143,11 @@ export function OperatorsPage() {
 
       <Card>
         {loading ? (
-          <p className="text-sm text-slate-500">Cargando…</p>
+          <p className="text-sm text-stone-500">Cargando…</p>
         ) : (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
+              <tr className="border-b border-stone-200 text-stone-500">
                 <th className="py-2">Usuario</th>
                 <th className="py-2">Compañía</th>
                 <th className="py-2">Rol</th>
@@ -160,8 +160,8 @@ export function OperatorsPage() {
                 const isAdmin = op.role === 'SystemAdmin'
                 if (editingId === op.operatorId) {
                   return (
-                    <tr key={op.operatorId} className="border-b border-slate-100 bg-slate-50">
-                      <td className="py-2 pr-2 font-semibold text-slate-800">{op.username}</td>
+                    <tr key={op.operatorId} className="border-b border-stone-100 bg-stone-50">
+                      <td className="py-2 pr-2 font-semibold text-stone-800">{op.username}</td>
                       <td className="py-2 pr-2">
                         <select
                           value={editCompanyId}
@@ -185,7 +185,7 @@ export function OperatorsPage() {
                         />
                       </td>
                       <td className="py-2">
-                        <label className="flex items-center gap-2 text-sm text-slate-700">
+                        <label className="flex items-center gap-2 text-sm text-stone-700">
                           <input type="checkbox" checked={editActive} onChange={(e) => setEditActive(e.target.checked)} />
                           Activo
                         </label>
@@ -202,14 +202,14 @@ export function OperatorsPage() {
                   )
                 }
                 return (
-                  <tr key={op.operatorId} className="border-b border-slate-100">
-                    <td className="py-3 font-semibold text-slate-800">{op.username}</td>
-                    <td className="py-3 text-slate-600">{op.companyName ?? '—'}</td>
-                    <td className="py-3 text-slate-600">{isAdmin ? 'Administrador' : 'Operador'}</td>
+                  <tr key={op.operatorId} className="border-b border-stone-100">
+                    <td className="py-3 font-semibold text-stone-800">{op.username}</td>
+                    <td className="py-3 text-stone-600">{op.companyName ?? '—'}</td>
+                    <td className="py-3 text-stone-600">{isAdmin ? 'Administrador' : 'Operador'}</td>
                     <td className="py-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          op.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+                          op.isActive ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-500'
                         }`}
                       >
                         {op.isActive ? 'Activo' : 'Inactivo'}
@@ -218,7 +218,7 @@ export function OperatorsPage() {
                     <td className="py-3">
                       <div className="flex items-center justify-end gap-3">
                         {isAdmin ? (
-                          <span className="text-xs text-slate-400">—</span>
+                          <span className="text-xs text-stone-400">—</span>
                         ) : (
                           <>
                             <Button variant="secondary" onClick={() => startEdit(op)}>

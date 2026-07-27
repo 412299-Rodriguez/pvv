@@ -1,1 +1,21 @@
 @import "tailwindcss";
+
+/*
+ * pvv-admin is deliberately monochrome: warm neutrals, near-black as the only
+ * interactive colour, and hue reserved for state — sold, abandoned, rejected.
+ * A tenant's portal is the place that wears a brand; the panel that configures
+ * every tenant should not compete with any of them.
+ */
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    /* Warm paper rather than a cold grey, so white surfaces read as raised. */
+    background-color: #f6f5f2;
+    color: #1c1917;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+}

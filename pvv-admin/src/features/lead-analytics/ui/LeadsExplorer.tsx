@@ -189,7 +189,7 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
           pixel with a scrollbar. Four short tabs wrap on their own if they
           ever have to.
         */}
-        <div className="flex flex-wrap gap-1 border-b border-slate-200 px-3 pt-2">
+        <div className="flex flex-wrap gap-1 border-b border-stone-200 px-3 pt-2">
           {STOP_TABS.map((tab) => {
             const active = step === tab.step
             return (
@@ -199,13 +199,13 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
                 onClick={() => changeFilter(() => setStep(tab.step))}
                 className={`-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-3 pb-2.5 pt-2 text-sm transition ${
                   active
-                    ? 'border-slate-800 font-semibold text-slate-900'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                    ? 'border-stone-800 font-semibold text-stone-900'
+                    : 'border-transparent text-stone-500 hover:text-stone-800'
                 }`}
               >
                 {tab.label}
                 <span
-                  className={`text-xs tabular-nums ${active ? 'text-slate-500' : 'text-slate-400'}`}
+                  className={`text-xs tabular-nums ${active ? 'text-stone-500' : 'text-stone-400'}`}
                 >
                   {formatCount(breakdown(tab.step)?.total ?? 0)}
                 </span>
@@ -217,7 +217,9 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
         {/* What happened to them, and the export for exactly this slice. */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
           {/* Segmented, so it reads as "one of these two" — there is no "all". */}
-          <div className="inline-flex rounded-lg border border-slate-300 bg-slate-50 p-0.5">
+          {/* Same segmented shape as the date range above it, so the two
+              "pick one" controls on this screen behave and read alike. */}
+          <div className="inline-flex rounded-md border border-stone-300 bg-white p-0.5">
             {OUTCOME_FILTERS.map((option) => {
               const stats = breakdown(step)
               const count = option.value === 'abandoned' ? stats?.abandoned : stats?.active
@@ -227,10 +229,10 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
                   key={option.value}
                   type="button"
                   onClick={() => changeFilter(() => setOutcome(option.value))}
-                  className={`rounded-md px-3 py-1.5 text-sm font-semibold transition ${
+                  className={`rounded px-3 py-1.5 text-sm transition ${
                     active
-                      ? 'bg-white text-slate-800 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700'
+                      ? 'bg-stone-900 font-medium text-white'
+                      : 'text-stone-500 hover:text-stone-900'
                   }`}
                 >
                   {option.label}
@@ -248,21 +250,21 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
             disabled={exporting}
             title="Exportar esta lista a CSV"
             aria-label="Exportar esta lista a CSV"
-            className="rounded-lg border border-slate-300 bg-white p-2 text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+            className="rounded-lg border border-stone-300 bg-white p-2 text-stone-600 transition hover:bg-stone-50 disabled:opacity-50"
           >
             {exporting ? <SpinnerIcon /> : <DownloadIcon />}
           </button>
         </div>
 
         {data === null ? (
-          <p className="py-16 text-center text-sm text-slate-500">Cargando leads…</p>
+          <p className="py-16 text-center text-sm text-stone-500">Cargando leads…</p>
         ) : (
           <>
             <LeadsTable leads={data.items} onRecover={setRecovering} />
 
             {total > 0 ? (
-              <div className="flex items-center justify-between border-t border-slate-200 px-5 py-3">
-                <span className="text-sm text-slate-500 tabular-nums">
+              <div className="flex items-center justify-between border-t border-stone-200 px-5 py-3">
+                <span className="text-sm text-stone-500 tabular-nums">
                   {formatCount(firstRow)}–{formatCount(lastRow)} de {formatCount(total)}
                 </span>
                 <div className="flex gap-2">
@@ -270,7 +272,7 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
                     type="button"
                     disabled={page === 1}
                     onClick={() => setPage((current) => current - 1)}
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-lg border border-stone-300 px-3 py-1.5 text-sm font-semibold text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Anterior
                   </button>
@@ -278,7 +280,7 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
                     type="button"
                     disabled={!hasNext}
                     onClick={() => setPage((current) => current + 1)}
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-lg border border-stone-300 px-3 py-1.5 text-sm font-semibold text-stone-700 transition hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Siguiente
                   </button>

@@ -18,14 +18,14 @@ export interface Stat {
  */
 export function StatBar({ stats }: { stats: Stat[] }) {
   return (
-    <div className="grid divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white lg:grid-cols-4 lg:divide-x lg:divide-y-0">
+    <div className="grid divide-y divide-stone-200 overflow-hidden rounded-lg border border-stone-200 bg-white lg:grid-cols-4 lg:divide-x lg:divide-y-0">
       {stats.map((stat) => (
         <div key={stat.label} className="px-5 py-4">
-          <div className="text-sm text-slate-500">{stat.label}</div>
-          <div className="mt-1 text-2xl font-semibold leading-tight text-slate-900">
+          <div className="text-xs font-medium text-stone-500">{stat.label}</div>
+          <div className="mt-1.5 text-[26px] font-semibold leading-none tracking-tight text-stone-900">
             {stat.value}
           </div>
-          {stat.hint ? <div className="mt-0.5 text-xs text-slate-400">{stat.hint}</div> : null}
+          {stat.hint ? <div className="mt-1.5 text-xs text-stone-400">{stat.hint}</div> : null}
         </div>
       ))}
     </div>
