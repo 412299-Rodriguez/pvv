@@ -14,6 +14,13 @@ public sealed class PaymentTransaction
     /// <summary>Anonymous session that started the checkout.</summary>
     public string? SessionId { get; set; }
 
+    /// <summary>
+    /// The wizard flow (lead) this payment belongs to. It is the bridge back to
+    /// the funnel: the browser is gone by the time the webhook and the emission
+    /// land, so the lead is resolved from here instead.
+    /// </summary>
+    public string? FlowId { get; set; }
+
     /// <summary>The company the portal belongs to (HashedCompanyId).</summary>
     public string? CompanyToken { get; set; }
 
@@ -45,4 +52,11 @@ public sealed class PaymentTransaction
     public int? EmissionAttempts { get; set; }
 
     public DateTime? EmissionUpdatedAt { get; set; }
+
+    /// <summary>
+    /// When the emission outcome was projected onto the lead. The result page
+    /// polls the status, so this keeps the funnel step from being recorded once
+    /// per poll.
+    /// </summary>
+    public DateTime? EmissionProjectedAt { get; set; }
 }

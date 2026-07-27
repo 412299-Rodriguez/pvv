@@ -1,6 +1,7 @@
 using System.Text.Json;
 using PvvBff.Application.Abstractions;
 using PvvBff.Application.Ingress;
+using PvvBff.Application.Leads;
 using PvvBff.Domain.Payments;
 
 namespace PvvBff.Application.Payments;
@@ -14,11 +15,16 @@ public sealed class PaymentInitHandler : IInternalIngressHandler
 {
     private readonly IPaymentGateway _gateway;
     private readonly IPaymentRepository _repository;
+    private readonly ILeadProjectionService _leads;
 
-    public PaymentInitHandler(IPaymentGateway gateway, IPaymentRepository repository)
+    public PaymentInitHandler(
+        IPaymentGateway gateway,
+        IPaymentRepository repository,
+        ILeadProjectionService leads)
     {
         _gateway = gateway;
         _repository = repository;
+        _leads = leads;
     }
 
     public string Key => "payment-init";
@@ -29,6 +35,7 @@ public sealed class PaymentInitHandler : IInternalIngressHandler
             return IngressResponse.Failure(400, "PAYMENT_INIT requires 'budgetId' and a positive 'amount'.");
 
         var transactionId = Guid.NewGuid().ToString("N");
+        var flowId = ReadOptionalString(context.Body, "flowId");
 
         var preference = await _gateway.CreatePreferenceAsync(
             new PaymentPreferenceRequest(transactionId, amount, $"PVV policy for budget {budgetId}"), ct);
@@ -39,6 +46,8 @@ public sealed class PaymentInitHandler : IInternalIngressHandler
                 Id = transactionId,
                 SessionId = context.SessionId,
                 CompanyToken = context.CompanyId,
+                // Kept so the webhook and the emission can find the lead later.
+                FlowId = flowId,
                 BudgetId = budgetId,
                 Amount = amount,
                 PreferenceId = preference.PreferenceId,
@@ -49,6 +58,26 @@ public sealed class PaymentInitHandler : IInternalIngressHandler
                 HolderName = ReadOptionalString(context.Body, "holderName"),
             },
             ct);
+
+        // Funnel step 4: the visitor reached the checkout. Projected here rather
+        // than from the front, which is about to be redirected away.
+        if (!string.IsNullOrWhiteSpace(flowId))
+        {
+            await _leads.ProjectAsync(
+                new LeadEvent(
+                    LeadEventNames.PaymentInitiated,
+                    flowId,
+                    context.CompanyId,
+                    context.SessionId,
+                    new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["paymentMethod"] = "mercadopago",
+                        ["transactionId"] = transactionId,
+                        ["preferenceId"] = preference.PreferenceId,
+                    },
+                    DateTime.UtcNow),
+                ct);
+        }
 
         return IngressResponse.Success(200, new
         {

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using PvvBff.Application.Abstractions;
+using PvvBff.Application.Leads;
 using PvvBff.Domain.Payments;
 
 namespace PvvBff.Application.Payments;
@@ -23,15 +24,18 @@ public sealed class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentComman
 
     private readonly IPaymentRepository _repository;
     private readonly IEmissionPublisher _publisher;
+    private readonly ILeadProjectionService _leads;
     private readonly ILogger<ConfirmPaymentHandler> _logger;
 
     public ConfirmPaymentHandler(
         IPaymentRepository repository,
         IEmissionPublisher publisher,
+        ILeadProjectionService leads,
         ILogger<ConfirmPaymentHandler> logger)
     {
         _repository = repository;
         _publisher = publisher;
+        _leads = leads;
         _logger = logger;
     }
 
@@ -52,6 +56,7 @@ public sealed class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentComman
         {
             transaction.Status = PaymentStatus.Failed;
             await _repository.UpdateAsync(transaction, ct);
+            await ProjectAsync(transaction, LeadEventNames.PaymentRejected, ct);
             _logger.LogInformation("Payment {TransactionId} marked failed ({Status})", transaction.Id, request.Status);
             return new ConfirmPaymentResult(Found: true, Published: false, Status: "failed");
         }
@@ -70,7 +75,26 @@ public sealed class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentComman
                 transaction.ConfirmedAt.Value),
             ct);
 
+        await ProjectAsync(transaction, LeadEventNames.PaymentConfirmed, ct);
+
         _logger.LogInformation("Payment {TransactionId} confirmed; emission message published", transaction.Id);
         return new ConfirmPaymentResult(Found: true, Published: true, Status: "confirmed");
+    }
+
+    /// <summary>Records the payment outcome on the lead the transaction came from.</summary>
+    private Task ProjectAsync(PaymentTransaction transaction, string eventName, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(transaction.FlowId))
+            return Task.CompletedTask;
+
+        return _leads.ProjectAsync(
+            new LeadEvent(
+                eventName,
+                transaction.FlowId,
+                transaction.CompanyToken,
+                transaction.SessionId,
+                Payload: null,
+                DateTime.UtcNow),
+            ct);
     }
 }

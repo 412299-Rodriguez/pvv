@@ -13,7 +13,14 @@ public interface IPaymentRepository
 
     /// <summary>
     /// Marks every still-Pending transaction created before <paramref name="olderThan"/>
-    /// as Abandoned. Returns how many were updated.
+    /// as Abandoned. Returns the transactions that were marked, so their leads can
+    /// be projected too.
     /// </summary>
-    Task<long> MarkAbandonedAsync(DateTime olderThan, CancellationToken ct);
+    Task<IReadOnlyList<PaymentTransaction>> MarkAbandonedAsync(DateTime olderThan, CancellationToken ct);
+
+    /// <summary>
+    /// Stamps the transaction as having had its emission outcome projected onto
+    /// the lead, so repeated status polls do not project it again.
+    /// </summary>
+    Task MarkEmissionProjectedAsync(string id, DateTime at, CancellationToken ct);
 }

@@ -23,14 +23,31 @@ public sealed class MongoPaymentRepository : IPaymentRepository
     public Task UpdateAsync(PaymentTransaction transaction, CancellationToken ct) =>
         _collection.ReplaceOneAsync(t => t.Id == transaction.Id, transaction, cancellationToken: ct);
 
-    public async Task<long> MarkAbandonedAsync(DateTime olderThan, CancellationToken ct)
+    // Targeted update rather than a full replace: the emission worker writes its
+    // own fields on this same document.
+    public Task MarkEmissionProjectedAsync(string id, DateTime at, CancellationToken ct) =>
+        _collection.UpdateOneAsync(
+            t => t.Id == id,
+            Builders<PaymentTransaction>.Update.Set(t => t.EmissionProjectedAt, at),
+            cancellationToken: ct);
+
+    public async Task<IReadOnlyList<PaymentTransaction>> MarkAbandonedAsync(DateTime olderThan, CancellationToken ct)
     {
         var filter = Builders<PaymentTransaction>.Filter.And(
             Builders<PaymentTransaction>.Filter.Eq(t => t.Status, PaymentStatus.Pending),
             Builders<PaymentTransaction>.Filter.Lt(t => t.CreatedAt, olderThan));
-        var update = Builders<PaymentTransaction>.Update.Set(t => t.Status, PaymentStatus.Abandoned);
 
-        var result = await _collection.UpdateManyAsync(filter, update, cancellationToken: ct);
-        return result.ModifiedCount;
+        // Read them first: the caller needs the flow ids to project their leads.
+        var stale = await (await _collection.FindAsync(filter, cancellationToken: ct)).ToListAsync(ct);
+        if (stale.Count == 0)
+            return [];
+
+        var ids = stale.Select(t => t.Id).ToList();
+        await _collection.UpdateManyAsync(
+            Builders<PaymentTransaction>.Filter.In(t => t.Id, ids),
+            Builders<PaymentTransaction>.Update.Set(t => t.Status, PaymentStatus.Abandoned),
+            cancellationToken: ct);
+
+        return stale;
     }
 }
