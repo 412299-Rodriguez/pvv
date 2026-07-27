@@ -96,11 +96,7 @@ public sealed class MercadoPagoGateway : IPaymentGateway
         var dto = await response.Content.ReadFromJsonAsync<PreferenceResponse>(JsonOptions, ct)
             ?? throw new InvalidOperationException("Mercado Pago returned an empty preference.");
 
-        // The token belongs to a Mercado Pago TEST USER, so the whole account is
-        // already a sandbox and init_point is the URL to send the buyer to.
-        // sandbox_init_point is the older TEST- credential mode; kept only as a
-        // fallback in case the account type changes.
-        var initPoint = !string.IsNullOrWhiteSpace(dto.InitPoint) ? dto.InitPoint : dto.SandboxInitPoint;
+        var initPoint = SelectInitPoint(dto);
         if (string.IsNullOrWhiteSpace(initPoint))
             throw new InvalidOperationException("Mercado Pago returned a preference with no init_point.");
 
@@ -165,6 +161,25 @@ public sealed class MercadoPagoGateway : IPaymentGateway
         // would be a wrong answer rather than an incomplete one.
         _ => PaymentOutcome.Pending,
     };
+
+    /// <summary>
+    /// Which checkout to send the buyer to.
+    ///
+    /// These are two different environments on two different hosts, not two
+    /// spellings of one URL: init_point is production (www.mercadopago.com.ar) and
+    /// sandbox_init_point is the test one (sandbox.mercadopago.com.ar). Landing a
+    /// buyer on production while the collector is a test account is the mismatch
+    /// Mercado Pago refuses with "una de las partes con la que intentás hacer el
+    /// pago es de prueba" — and it refuses it regardless of who the buyer is, which
+    /// makes it very easy to misread as a problem with the payer and go hunting on
+    /// the wrong side.
+    /// </summary>
+    private string SelectInitPoint(PreferenceResponse dto)
+    {
+        var preferred = _options.UseSandbox ? dto.SandboxInitPoint : dto.InitPoint;
+        var fallback = _options.UseSandbox ? dto.InitPoint : dto.SandboxInitPoint;
+        return !string.IsNullOrWhiteSpace(preferred) ? preferred : fallback;
+    }
 
     private void Authorize(HttpRequestMessage message) =>
         message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.AccessToken);

@@ -45,6 +45,16 @@ public sealed class MercadoPagoOptions
     /// </summary>
     public bool AutoReturn { get; set; } = true;
 
+    /// <summary>
+    /// Send the buyer to the sandbox checkout instead of the production one.
+    ///
+    /// Must be true whenever the access token belongs to a test account. Mercado
+    /// Pago returns two different hosts for a preference — sandbox.mercadopago.com.ar
+    /// and www.mercadopago.com.ar — and it refuses a payment whose collector and
+    /// checkout are in different environments.
+    /// </summary>
+    public bool UseSandbox { get; set; }
+
     public string CurrencyId { get; set; } = "ARS";
 
     /// <summary>How the charge is labelled on the buyer's card statement.</summary>
