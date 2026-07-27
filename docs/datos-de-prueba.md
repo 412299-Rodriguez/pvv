@@ -1,0 +1,198 @@
+# Datos de prueba
+
+Referencia para levantar el sistema y recorrer los casos de prueba de punta a punta.
+
+> ⚠️ **Todo lo que sigue es de desarrollo.** Las credenciales están sembradas por
+> `ConfigDbSeeder` y solo existen en el entorno local. Nada de esto sirve —ni debe
+> usarse— fuera de una máquina de desarrollo.
+
+---
+
+## 1. Servicios
+
+| Servicio | Puerto | Cómo se levanta |
+|---|---|---|
+| pvv-soat | 5001 | `dotnet run` en `pvv-soat/PvvSoat.API` |
+| pvv-config | 5002 | `dotnet run` en `pvv-config/PvvConfig.API` |
+| pvv-bff | 5003 | `dotnet run` en `pvv-bff/PvvBff.API` |
+| pvv-emission | — | `dotnet run` en `pvv-emission/PvvEmission.Worker` |
+| pvv-front (portal) | 5173 | `npm run dev` en `pvv-front` |
+| pvv-admin (panel) | 5174 | `npm run dev` en `pvv-admin` |
+
+Infraestructura en Docker (`infra/docker-compose.yml`): SQL Server 1433 · MongoDB
+27017 · Redis 6379 · RabbitMQ 5672 (UI 15672) · Redis Commander 8081.
+Usuario/clave de Mongo y RabbitMQ: `pvv_user` / `pvv_pass`. SQL: `sa` / `PvvLocal123!`.
+
+Para una compra completa hacen falta **los cinco**: config, soat, bff, worker y front.
+Sin el worker el pago se confirma pero la póliza nunca se emite.
+
+---
+
+## 2. Cuentas del panel
+
+| Usuario | Clave | Rol | Alcance |
+|---|---|---|---|
+| `superadmin@pvv.com` | `Super123!` | SystemAdmin | Alta de compañías y operadores. **No** ve leads ni config de inquilinos |
+| `admin@segucor.com` | `Segu123!` | CompanyOperator | Solo SeguCor |
+| `operador@rivadavia.com` | `Riva123!` | CompanyOperator | Solo Seguros Rivadavia |
+| `admin@vehisegur.com` | *(la definida al crearlo)* | CompanyOperator | Solo VehiSegur |
+
+El superadmin es administrador de plataforma: crea compañías y sus operadores, y
+nada más. La configuración y los leads de cada compañía son de su propio operador.
+
+---
+
+## 3. Compañías y portales
+
+El link del portal es `http://localhost:5173/?c=<hash>`. Ese hash es el `companyId`
+encriptado con AES: **el token es la identidad del inquilino**, no hay tabla de links.
+Se obtiene con el botón **Copiar portal** en la lista de compañías del superadmin.
+
+### SeguCor — la única que vende
+
+`companyId` `11111111-1111-1111-1111-111111111111`
+
+```
+http://localhost:5173/?c=cHZ2RGV2SXYxNkJ5dGVzIf_MeCvAuLi5PWH1u_DogZFZNq3_lkSFD3goOIzw6t738lyP2Gz2PiifbqNfJ4NT5A
+```
+
+Es la compañía del seed: tiene apariencia, productos y precios cargados. El hash es
+**permanente** (id fijo + encriptación determinística), así que sobrevive a un reseteo
+de la base.
+
+### Seguros Rivadavia — inquilino sin catálogo
+
+`companyId` `b5049c79-54a3-4971-bf82-21dfc4d52700`
+
+```
+http://localhost:5173/?c=cHZ2RGV2SXYxNkJ5dGVzIRe7XIv9E-SdzsecMHGIUGc5hu7DU82BqKZOA-wqeuroc-ShS5oatNmWnKp1ad1E9w
+```
+
+### VehiSegur — inquilino sin catálogo
+
+`companyId` `ad37f2ad-ccb6-45d2-b818-d2c060be2843`
+
+```
+http://localhost:5173/?c=cHZ2RGV2SXYxNkJ5dGVzIakop4lRQo6fb22eDVISlhuBs0EjaGDSohUSrR8ML671uwANuv2uzWboagbn50gh1A
+```
+
+Rivadavia y VehiSegur se crearon desde el panel. Al darlas de alta se les sembró la
+apariencia por defecto, pero **no** productos ni precios: sus portales cargan y
+aplican su tema, y al llegar a coberturas avisan que no hay cobertura disponible.
+Eso es correcto — un inquilino nuevo nace con la cara puesta y sin catálogo.
+
+---
+
+## 4. Patentes y qué valida cada una
+
+| Patente | Vehículo | Valida |
+|---|---|---|
+| `MDJ345` | Auto 2020 | Compra completa |
+| `LRP782` | Auto 2022 | Compra completa |
+| `KQB910` | Auto 2018 | Compra completa |
+| `MNO456` | Moto 2019 | Compra completa · **precio por tipo** (moto sale distinto que auto) |
+| `TJK220` | Camioneta 2021 | Compra completa · precio por tipo |
+| `VTR550` | Utilitario 2020 | Compra completa · precio por tipo |
+| `AA001BB` | Auto 2021 | Compra completa |
+| `AC123BD` | Camioneta 2023 | **Renovación** — tiene póliza vigente del seed, abre el modal |
+| `VWX985` | Auto **1985** | **Sin cobertura** — el año queda fuera del rango de las reglas (2000–2030) |
+| cualquiera inventada | — | **Vehículo no encontrado** — p. ej. `KKK222` |
+
+> **Cuidado**: comprar una patente la deja asegurada, y a partir de ahí pasa a ser un
+> caso de renovación. Para devolverla a "libre", borrá su póliza (ver §7).
+> `AC123BD` es la única que **debe** quedar asegurada siempre: es el caso de renovación.
+
+Los cuatro tipos de vehículo (Auto, Moto, Camioneta, Utilitario) existen a propósito:
+sirven para comprobar que el precio cambia según el tipo.
+
+---
+
+## 5. Documentos
+
+| DNI | Titular | Comportamiento |
+|---|---|---|
+| `30111222` | Juan Perez | Precarga nombre, mail y teléfono |
+| `28999888` | Maria Gomez | Precarga |
+| `27111333` | Máximo Agustín Rodríguez | Precarga |
+| cualquier otro | — | Formulario vacío, se carga a mano y queda guardado |
+
+El DNI se pide con mínimo 7 dígitos.
+
+---
+
+## 6. Productos y precios de SeguCor
+
+Dos productos, con precio por tipo de vehículo y años 2000–2030:
+
+| Producto | Auto | Moto | Camioneta | Utilitario |
+|---|---|---|---|---|
+| SOAT Básico | 15.000 | 8.000 | 22.000 | 18.000 |
+| SOAT Full | 28.000 | 14.000 | 40.000 | 33.000 |
+
+El portal marca la opción **más cara** como recomendada.
+
+---
+
+## 7. Tiempos de abandono
+
+Un lead pasa a "abandonado" cuando deja de haber actividad. Los valores de desarrollo
+están en `pvv-bff/PvvBff.API/appsettings.Development.json` y son cortos a propósito,
+para poder ver el ciclo mientras se prueba:
+
+| | Desarrollo | Producción |
+|---|---|---|
+| Lead sin actividad | **1 min** | 30 min |
+| Checkout abierto sin pagar | **3 min** | 30 min |
+| Frecuencia del barrido | **30 s** | 5 min |
+
+Si el visitante vuelve y hace algo, el lead **deja de estar abandonado**: el abandono
+es una inferencia por silencio, y un evento nuevo la desmiente.
+
+Consecuencia práctica al probar: si te frenás más de un minuto en medio de una compra,
+vas a ver el lead pasar a abandonado y volver a activo. Es el comportamiento correcto.
+
+---
+
+## 8. Comandos útiles
+
+**Ver los últimos leads**
+
+```bash
+docker exec pvv-mongodb mongosh -u pvv_user -p pvv_pass --authenticationDatabase admin --quiet \
+  --eval 'db.getSiblingDB("pvv_bff_db").leads.find().sort({CreatedAt:-1}).limit(3).pretty()'
+```
+
+**Borrar todos los leads y arrancar limpio**
+
+```bash
+docker exec pvv-mongodb mongosh -u pvv_user -p pvv_pass --authenticationDatabase admin --quiet \
+  --eval 'const d=db.getSiblingDB("pvv_bff_db"); d.leads.deleteMany({}); d.event_logs.deleteMany({}); d.payment_transactions.deleteMany({});'
+```
+
+**Liberar una patente que quedó asegurada** (reemplazar la patente)
+
+```bash
+MSYS_NO_PATHCONV=1 docker exec pvv-sqlserver /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P 'PvvLocal123!' -C -Q \
+  "DELETE p FROM pvv_soat_db.dbo.Policies p JOIN pvv_soat_db.dbo.Vehicles v ON v.VehicleId=p.VehicleId WHERE v.Plate='MDJ345'"
+```
+
+**Registrar un vehículo nuevo** (por ejemplo, para forzar otro caso sin cobertura)
+
+```bash
+curl -X POST http://localhost:5001/api/vehicles -H 'Content-Type: application/json' \
+  -d '{"plate":"VWX985","brand":"Renault","model":"12 Break","year":1985,"vehicleType":"Car"}'
+```
+
+Tipos válidos: `Car`, `Motorcycle`, `Truck`, `Van`.
+
+---
+
+## 9. Notas
+
+- El pago usa un **checkout simulado propio** (`/mock-checkout`), no Mercado Pago real.
+  Los botones Aprobar y Rechazar llaman al mismo webhook que usaría el proveedor.
+- Turnstile corre con la clave de prueba de Cloudflare, que acepta cualquier token.
+- Borrar una compañía se lleva en cascada su configuración y sus operadores, pero
+  **no sus leads**: viven en MongoDB, en otro servicio, sin borrado en cascada entre
+  bases. Es una limitación conocida.
