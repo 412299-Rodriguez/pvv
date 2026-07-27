@@ -12,11 +12,31 @@ public interface IPaymentRepository
     Task UpdateAsync(PaymentTransaction transaction, CancellationToken ct);
 
     /// <summary>
-    /// Marks every still-Pending transaction created before <paramref name="olderThan"/>
-    /// as Abandoned. Returns the transactions that were marked, so their leads can
-    /// be projected too.
+    /// Records that the provider has a payment for this transaction which has not been
+    /// completed yet — a cash coupon or a transfer — together with its deadline.
     /// </summary>
-    Task<IReadOnlyList<PaymentTransaction>> MarkAbandonedAsync(DateTime olderThan, CancellationToken ct);
+    Task MarkPendingPaymentAsync(
+        string id, string providerPaymentId, DateTime? pendingUntil, CancellationToken ct);
+
+    /// <summary>
+    /// Pending transactions still worth asking the provider about: those created after
+    /// <paramref name="createdAfter"/>, plus any with a payment awaiting completion
+    /// regardless of age — a cash coupon must not fall out of the window just because
+    /// it is three weeks old.
+    /// </summary>
+    Task<IReadOnlyList<PaymentTransaction>> GetReconcilableAsync(
+        DateTime createdAfter, CancellationToken ct);
+
+    /// <summary>
+    /// Marks still-Pending transactions created before <paramref name="createdBefore"/>
+    /// as Abandoned, and returns them so their leads can be projected too.
+    ///
+    /// A transaction whose pending payment is still payable as of <paramref name="asOf"/>
+    /// is deliberately left alone: the buyer is holding a coupon, which is the opposite
+    /// of having walked away.
+    /// </summary>
+    Task<IReadOnlyList<PaymentTransaction>> MarkAbandonedAsync(
+        DateTime createdBefore, DateTime asOf, CancellationToken ct);
 
     /// <summary>
     /// Marks the transaction Confirmed and returns whether this caller was the one

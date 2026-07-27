@@ -33,4 +33,11 @@ public sealed class PaymentOptions
 
     /// <summary>How often the abandonment job scans for stale transactions.</summary>
     public int AbandonmentScanSeconds { get; set; } = 300;
+
+    /// <summary>
+    /// How far back the reconciliation pass looks for transactions to re-check with the
+    /// provider. Transactions holding an unpaid coupon are included regardless of age,
+    /// so this only bounds the ones that never got that far.
+    /// </summary>
+    public int ReconcileWindowHours { get; set; } = 48;
 }

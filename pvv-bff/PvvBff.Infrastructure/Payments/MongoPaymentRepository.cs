@@ -57,11 +57,44 @@ public sealed class MongoPaymentRepository : IPaymentRepository
         return result.ModifiedCount == 1;
     }
 
-    public async Task<IReadOnlyList<PaymentTransaction>> MarkAbandonedAsync(DateTime olderThan, CancellationToken ct)
+    // Targeted update for the same reason as above: the emission worker owns other
+    // fields on this document. Only annotates a transaction that is still Pending.
+    public Task MarkPendingPaymentAsync(
+        string id, string providerPaymentId, DateTime? pendingUntil, CancellationToken ct) =>
+        _collection.UpdateOneAsync(
+            Builders<PaymentTransaction>.Filter.And(
+                Builders<PaymentTransaction>.Filter.Eq(t => t.Id, id),
+                Builders<PaymentTransaction>.Filter.Eq(t => t.Status, PaymentStatus.Pending)),
+            Builders<PaymentTransaction>.Update
+                .Set(t => t.ProviderPaymentId, providerPaymentId)
+                .Set(t => t.PaymentPendingUntil, pendingUntil),
+            cancellationToken: ct);
+
+    public async Task<IReadOnlyList<PaymentTransaction>> GetReconcilableAsync(
+        DateTime createdAfter, CancellationToken ct)
     {
         var filter = Builders<PaymentTransaction>.Filter.And(
             Builders<PaymentTransaction>.Filter.Eq(t => t.Status, PaymentStatus.Pending),
-            Builders<PaymentTransaction>.Filter.Lt(t => t.CreatedAt, olderThan));
+            Builders<PaymentTransaction>.Filter.Or(
+                Builders<PaymentTransaction>.Filter.Gte(t => t.CreatedAt, createdAfter),
+                // Age is the wrong filter for a coupon: it is supposed to sit unpaid
+                // for weeks, so having a payment at all keeps it in scope.
+                Builders<PaymentTransaction>.Filter.Ne(t => t.ProviderPaymentId, null)));
+
+        return await (await _collection.FindAsync(filter, cancellationToken: ct)).ToListAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<PaymentTransaction>> MarkAbandonedAsync(
+        DateTime createdBefore, DateTime asOf, CancellationToken ct)
+    {
+        var filter = Builders<PaymentTransaction>.Filter.And(
+            Builders<PaymentTransaction>.Filter.Eq(t => t.Status, PaymentStatus.Pending),
+            Builders<PaymentTransaction>.Filter.Lt(t => t.CreatedAt, createdBefore),
+            // Holding a payable coupon is the opposite of having abandoned the
+            // purchase. Only sweep once that deadline has actually passed.
+            Builders<PaymentTransaction>.Filter.Or(
+                Builders<PaymentTransaction>.Filter.Eq(t => t.PaymentPendingUntil, null),
+                Builders<PaymentTransaction>.Filter.Lt(t => t.PaymentPendingUntil, asOf)));
 
         // Read them first: the caller needs the flow ids to project their leads.
         var stale = await (await _collection.FindAsync(filter, cancellationToken: ct)).ToListAsync(ct);

@@ -32,6 +32,21 @@ public sealed class PaymentTransaction
     /// <summary>Provider preference id (mock id in HU-08, real MP id in HU-11).</summary>
     public string? PreferenceId { get; set; }
 
+    /// <summary>
+    /// The provider's own id for the payment, once one exists. Set even while the
+    /// payment is still pending, which is how we know the difference between a
+    /// visitor who walked away from the checkout and one who is holding a cash
+    /// coupon they have not paid yet.
+    /// </summary>
+    public string? ProviderPaymentId { get; set; }
+
+    /// <summary>
+    /// Deadline the buyer has to complete a pending payment (a cash coupon lives for
+    /// weeks). While this is in the future the transaction is NOT abandoned, however
+    /// old it is.
+    /// </summary>
+    public DateTime? PaymentPendingUntil { get; set; }
+
     public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
 
     public DateTime CreatedAt { get; set; }

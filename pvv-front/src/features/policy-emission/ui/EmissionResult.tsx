@@ -16,8 +16,10 @@ export interface EmissionTicket {
 }
 
 interface EmissionResultProps {
-  state: 'emitting' | 'success' | 'error';
+  state: 'emitting' | 'awaiting-payment' | 'success' | 'error';
   ticket?: EmissionTicket | null;
+  /** Already-formatted deadline, shown when state is 'awaiting-payment'. */
+  paymentDeadline?: string | null;
   onHome: () => void;
   onRetry?: () => void;
 }
@@ -26,7 +28,13 @@ interface EmissionResultProps {
  * Presentational emission outcome screen. Driven entirely by props so it can be
  * fed by the result page's EMISSION_STATUS polling (after the payment redirect).
  */
-export function EmissionResult({ state, ticket, onHome, onRetry }: EmissionResultProps) {
+export function EmissionResult({
+  state,
+  ticket,
+  paymentDeadline,
+  onHome,
+  onRetry,
+}: EmissionResultProps) {
   // Stable confetti layout per render.
   const confetti = useMemo(
     () =>
@@ -49,6 +57,28 @@ export function EmissionResult({ state, ticket, onHome, onRetry }: EmissionResul
           <p className={styles.subtitle}>Esto puede tardar unos segundos</p>
           <div className={styles.bar}>
             <i className={styles.barFill} />
+          </div>
+        </div>
+      )}
+
+      {/* Cash coupon or transfer: there IS a payment, it just has not been made yet.
+          Showing the emission spinner here would tell the buyer their policy is on
+          the way when in fact the ball is in their court. */}
+      {state === 'awaiting-payment' && (
+        <div className={styles.state}>
+          <h2 className={styles.title}>Falta que pagues tu cupón</h2>
+          <p className={styles.subtitle}>
+            Generamos el cupón, pero el pago todavía no se acreditó.
+            {paymentDeadline ? ` Tenés hasta el ${paymentDeadline} para pagarlo.` : ''}
+          </p>
+          <p className={styles.subtitle}>
+            Cuando se acredite, emitimos tu póliza automáticamente y te avisamos por mail.
+            No hace falta que vuelvas a comprar.
+          </p>
+          <div className={styles.buttons}>
+            <Button variant="primary" onClick={onHome}>
+              Volver al inicio
+            </Button>
           </div>
         </div>
       )}

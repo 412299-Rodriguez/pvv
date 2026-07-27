@@ -126,6 +126,12 @@ export interface EmissionStatusResponse {
   transactionId: string;
   /** Pending | Confirmed | Failed | Abandoned. */
   paymentStatus: string;
+  /**
+   * Deadline (ISO) of a payment the provider has but the buyer has not completed —
+   * a cash coupon or a transfer. Present only in that case, and it is what tells
+   * "issuing your policy" apart from "you still have to go and pay".
+   */
+  paymentPendingUntil: string | null;
   /** pending | emitting | success | failed | retry-exhausted. */
   emissionStatus: string;
   policyNumber: string | null;

@@ -63,6 +63,10 @@ public sealed class EmissionStatusHandler : IInternalIngressHandler
         {
             transactionId,
             paymentStatus = tx.Status.ToString(),
+            // Set only when the provider has a payment that has not been completed
+            // yet, which is how the result page tells "we are issuing your policy"
+            // apart from "you are holding a coupon you have not paid".
+            paymentPendingUntil = tx.PaymentPendingUntil,
             emissionStatus = tx.EmissionStatus ?? "pending",
             policyNumber = tx.PolicyNumber,
             amount = tx.Amount,

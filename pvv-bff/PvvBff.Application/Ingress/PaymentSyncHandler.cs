@@ -62,7 +62,10 @@ public sealed class PaymentSyncHandler : IInternalIngressHandler
         if (payment is null)
             return Result(transactionId, tx.Status, synced: false, outcome: null);
 
-        var result = await _mediator.Send(new ConfirmPaymentCommand(transactionId, payment.Outcome), ct);
+        var result = await _mediator.Send(
+            new ConfirmPaymentCommand(
+                transactionId, payment.Outcome, payment.ProviderPaymentId, payment.ExpiresAt),
+            ct);
 
         // Re-read rather than assume: the command may have lost the compare-and-set
         // to a webhook that landed at the same moment.

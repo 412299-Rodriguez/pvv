@@ -33,6 +33,10 @@ public static class DependencyInjection
         // handler and the server-side producers (payments, emission, abandonment).
         services.AddScoped<ILeadProjectionService, LeadProjectionService>();
 
+        // Payments — asking the provider about transactions still believed unpaid,
+        // driven by the abandonment sweep.
+        services.AddScoped<IPaymentReconciler, PaymentReconciler>();
+
         return services;
     }
 }

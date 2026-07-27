@@ -4,21 +4,29 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PvvBff.Application.Abstractions;
 using PvvBff.Application.Leads;
+using PvvBff.Application.Payments;
 using PvvBff.Infrastructure.Leads;
 
 namespace PvvBff.Infrastructure.Payments;
 
 /// <summary>
-/// Periodic abandonment sweep, in two passes.
+/// Periodic sweep, in three passes.
 ///
-/// First the payment one: transactions left Pending past the TTL become
-/// Abandoned (the visitor opened the checkout and never came back). Then the
-/// funnel one: any lead still active with no recent activity is closed as
-/// abandoned, which is what catches the visitors who left at the plate, the
-/// holder or the quote — long before any payment existed.
+/// It starts by RECONCILING: asking the provider about transactions we still believe
+/// are unpaid. This has to come first, because otherwise the sweep pronounces on
+/// payments it never asked about — and a notification that was lost, or that could
+/// never reach this machine at all, would turn a completed purchase into an abandoned
+/// lead with the buyer's money already taken.
 ///
-/// The order matters: payment abandonment records the richer step-4 detail, and
-/// the generic pass then skips those leads because they are no longer active.
+/// Then the payment pass: transactions left Pending past the TTL become Abandoned
+/// (the visitor opened the checkout and never came back). Then the funnel one: any
+/// lead still active with no recent activity is closed as abandoned, which is what
+/// catches the visitors who left at the plate, the holder or the quote — long before
+/// any payment existed.
+///
+/// The order matters throughout: reconciliation rescues what was actually paid,
+/// payment abandonment records the richer step-4 detail, and the generic pass then
+/// skips those leads because they are no longer active.
 /// </summary>
 public sealed class AbandonmentDetectionJob : BackgroundService
 {
@@ -63,10 +71,19 @@ public sealed class AbandonmentDetectionJob : BackgroundService
             var repository = scope.ServiceProvider.GetRequiredService<IPaymentRepository>();
             var leads = scope.ServiceProvider.GetRequiredService<ILeadStore>();
             var projection = scope.ServiceProvider.GetRequiredService<ILeadProjectionService>();
+            var reconciler = scope.ServiceProvider.GetRequiredService<IPaymentReconciler>();
+
+            var now = DateTime.UtcNow;
+
+            // Pass 0 — ask before judging.
+            var confirmed = await reconciler.ReconcileAsync(
+                now.AddHours(-Math.Abs(_options.ReconcileWindowHours)), ct);
+            if (confirmed > 0)
+                _logger.LogInformation("Reconciliation recovered {Count} paid transaction(s)", confirmed);
 
             // Pass 1 — checkouts that were opened and never completed.
-            var paymentThreshold = DateTime.UtcNow.AddMinutes(-_options.AbandonmentTtlMinutes);
-            var stale = await repository.MarkAbandonedAsync(paymentThreshold, ct);
+            var paymentThreshold = now.AddMinutes(-_options.AbandonmentTtlMinutes);
+            var stale = await repository.MarkAbandonedAsync(paymentThreshold, now, ct);
             foreach (var transaction in stale)
             {
                 if (string.IsNullOrWhiteSpace(transaction.FlowId))
@@ -87,7 +104,7 @@ public sealed class AbandonmentDetectionJob : BackgroundService
                 _logger.LogInformation("Marked {Count} stale pending payment(s) as abandoned", stale.Count);
 
             // Pass 2 — visitors who left before ever reaching the checkout.
-            var leadThreshold = DateTime.UtcNow.AddMinutes(-_leadOptions.AbandonmentTtlMinutes);
+            var leadThreshold = now.AddMinutes(-_leadOptions.AbandonmentTtlMinutes);
             var abandonedLeads = await leads.MarkStaleAsAbandonedAsync(leadThreshold, ct);
             if (abandonedLeads > 0)
                 _logger.LogInformation("Marked {Count} inactive lead(s) as abandoned", abandonedLeads);

@@ -7,8 +7,16 @@ using PvvBff.Domain.Payments;
 namespace PvvBff.Application.Payments;
 
 /// <summary>Apply what the provider says about a payment to our transaction.</summary>
-public sealed record ConfirmPaymentCommand(string TransactionId, PaymentOutcome Outcome)
-    : IRequest<ConfirmPaymentResult>;
+/// <param name="ProviderPaymentId">
+/// The provider's payment id, when there is a payment to point at. Absent from the
+/// mock gateway, which reports an outcome and nothing else.
+/// </param>
+/// <param name="PendingUntil">Deadline of a still-unpaid payment (a cash coupon).</param>
+public sealed record ConfirmPaymentCommand(
+    string TransactionId,
+    PaymentOutcome Outcome,
+    string? ProviderPaymentId = null,
+    DateTime? PendingUntil = null) : IRequest<ConfirmPaymentResult>;
 
 public sealed record ConfirmPaymentResult(bool Found, bool Published, string Status);
 
@@ -53,12 +61,24 @@ public sealed class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentComman
         if (transaction.Status == PaymentStatus.Confirmed)
             return new ConfirmPaymentResult(Found: true, Published: false, Status: "already_confirmed");
 
-        // Still in flight — decide nothing and write nothing. This is where the
-        // pre-HU-11 code was wrong: it treated anything that was not "approved" as
-        // a failure, and Mercado Pago's pending/in_process (cash coupon, transfer,
-        // fraud review) would have killed sales that were about to succeed.
+        // Still in flight — decide nothing about the sale. This is where the pre-HU-11
+        // code was wrong: it treated anything that was not "approved" as a failure, and
+        // Mercado Pago's pending/in_process (cash coupon, transfer, fraud review) would
+        // have killed sales that were about to succeed.
+        //
+        // But "decide nothing" is not "record nothing". When a payment exists and is
+        // merely unpaid, its id and deadline are exactly what stops the abandonment
+        // sweep from discarding the sale half an hour into a three-week coupon.
         if (request.Outcome == PaymentOutcome.Pending)
+        {
+            if (!string.IsNullOrWhiteSpace(request.ProviderPaymentId))
+            {
+                await _repository.MarkPendingPaymentAsync(
+                    transaction.Id, request.ProviderPaymentId, request.PendingUntil, ct);
+            }
+
             return new ConfirmPaymentResult(Found: true, Published: false, Status: "pending");
+        }
 
         if (request.Outcome == PaymentOutcome.Rejected)
         {

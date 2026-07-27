@@ -39,11 +39,16 @@ public enum PaymentOutcome
 /// <param name="TransactionId">OUR transaction id, carried as the provider's external reference.</param>
 /// <param name="Outcome">The provider's status mapped onto <see cref="PaymentOutcome"/>.</param>
 /// <param name="RawStatus">The provider's own status string, kept for logs.</param>
+/// <param name="ExpiresAt">
+/// When a still-pending payment stops being payable — the expiry of a cash coupon or
+/// transfer. Null for instruments that settle immediately.
+/// </param>
 public sealed record GatewayPayment(
     string ProviderPaymentId,
     string TransactionId,
     PaymentOutcome Outcome,
-    string RawStatus);
+    string RawStatus,
+    DateTime? ExpiresAt);
 
 /// <summary>
 /// Abstraction over the payment provider. Two implementations exist and both are

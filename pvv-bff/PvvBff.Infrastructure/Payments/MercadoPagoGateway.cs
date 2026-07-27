@@ -149,7 +149,8 @@ public sealed class MercadoPagoGateway : IPaymentGateway
             dto.Id.ToString(),
             dto.ExternalReference ?? string.Empty,
             MapOutcome(dto.Status),
-            dto.Status ?? string.Empty);
+            dto.Status ?? string.Empty,
+            dto.DateOfExpiration?.UtcDateTime);
 
     private static PaymentOutcome MapOutcome(string? status) => status switch
     {
@@ -283,6 +284,13 @@ public sealed class MercadoPagoGateway : IPaymentGateway
         /// <summary>Our transaction id, set when the preference was created.</summary>
         [JsonPropertyName("external_reference")]
         public string? ExternalReference { get; set; }
+
+        /// <summary>
+        /// Deadline for a pending payment — a Pago Fácil / Rapipago coupon typically
+        /// gets weeks. Absent for card and wallet payments, which settle at once.
+        /// </summary>
+        [JsonPropertyName("date_of_expiration")]
+        public DateTimeOffset? DateOfExpiration { get; set; }
     }
 
     private sealed class PaymentSearchResponse

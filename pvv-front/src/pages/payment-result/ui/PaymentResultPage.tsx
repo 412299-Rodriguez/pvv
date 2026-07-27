@@ -6,7 +6,7 @@ import { EmissionResult, type EmissionTicket } from '@/features/policy-emission'
 import { formatDate } from '@/shared/lib';
 import styles from './PaymentResultPage.module.css';
 
-type ResultState = 'emitting' | 'success' | 'error';
+type ResultState = 'emitting' | 'awaiting-payment' | 'success' | 'error';
 
 const POLL_MS = 2000;
 /** Keep the "Emitiendo…" screen up at least this long so it's actually visible. */
@@ -21,6 +21,7 @@ export function PaymentResultPage() {
   const tx = new URLSearchParams(window.location.search).get('tx') ?? '';
   const [state, setState] = useState<ResultState>('emitting');
   const [ticket, setTicket] = useState<EmissionTicket | null>(null);
+  const [paymentDeadline, setPaymentDeadline] = useState<string | null>(null);
 
   useEffect(() => {
     if (!tx) {
@@ -47,6 +48,18 @@ export function PaymentResultPage() {
 
         if (status.paymentStatus === 'Failed' || status.paymentStatus === 'Abandoned') {
           settle(() => setState('error'));
+          return;
+        }
+
+        // A payment exists at the provider but has not been completed: a cash coupon
+        // or a transfer, which can take days. Terminal for this page — polling for it
+        // would spin forever, and the buyer has somewhere to be (a payment counter).
+        if (status.paymentStatus === 'Pending' && status.paymentPendingUntil) {
+          const until = status.paymentPendingUntil;
+          settle(() => {
+            setPaymentDeadline(formatDate(new Date(until)));
+            setState('awaiting-payment');
+          });
           return;
         }
 
@@ -108,7 +121,12 @@ export function PaymentResultPage() {
 
   return (
     <main className={styles.stage}>
-      <EmissionResult state={state} ticket={ticket} onHome={goHome} />
+      <EmissionResult
+        state={state}
+        ticket={ticket}
+        paymentDeadline={paymentDeadline}
+        onHome={goHome}
+      />
     </main>
   );
 }
