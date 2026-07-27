@@ -14,7 +14,7 @@ public class JwtService(IOptions<JwtSettings> options) : IJwtService
     private static readonly TimeSpan TokenLifetime = TimeSpan.FromHours(8);
     private readonly JwtSettings _settings = options.Value;
 
-    public (string Token, DateTime ExpiresAt) GenerateToken(Operator op)
+    public (string Token, DateTime ExpiresAt) GenerateToken(Operator op, string? companyToken)
     {
         var expiresAt = DateTime.UtcNow.Add(TokenLifetime);
 
@@ -29,6 +29,13 @@ public class JwtService(IOptions<JwtSettings> options) : IJwtService
         if (op.CompanyId.HasValue)
         {
             claims.Add(new Claim("companyId", op.CompanyId.Value.ToString()));
+        }
+
+        // The portal-facing hash. pvv-bff stores leads keyed by it, so carrying it
+        // signed lets the BFF authorize a leads query without calling back here.
+        if (!string.IsNullOrWhiteSpace(companyToken))
+        {
+            claims.Add(new Claim("companyToken", companyToken));
         }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Secret));

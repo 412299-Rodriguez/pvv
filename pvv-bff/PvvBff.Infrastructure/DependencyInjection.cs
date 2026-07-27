@@ -46,6 +46,7 @@ public static class DependencyInjection
             // Leads (HU-07) — funnel view + raw event log.
             services.Configure<LeadOptions>(configuration.GetSection(LeadOptions.SectionName));
             services.AddScoped<ILeadStore, MongoLeadStore>();
+            services.AddScoped<ILeadQueryStore, MongoLeadQueryStore>();
             services.AddScoped<IEventLogStore, MongoEventLogStore>();
             services.AddHostedService<MongoIndexInitializer>();
         }
