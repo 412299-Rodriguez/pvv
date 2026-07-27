@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 
+import { getCompany } from '@/entities/company'
 import { useSessionStore } from '@/entities/session'
 
 const OPERATOR_TABS = [
@@ -17,16 +19,38 @@ const ADMIN_TABS = [
 export function AppShell() {
   const role = useSessionStore((s) => s.role)
   const username = useSessionStore((s) => s.username)
+  const companyId = useSessionStore((s) => s.companyId)
+  const companyName = useSessionStore((s) => s.companyName)
+  const setCompanyName = useSessionStore((s) => s.setCompanyName)
   const logout = useSessionStore((s) => s.logout)
 
   const tabs = role === 'SystemAdmin' ? ADMIN_TABS : OPERATOR_TABS
+
+  // An operator works inside one company, so the shell says which one. Loaded
+  // once per session; a SystemAdmin has none and picks a company per screen.
+  useEffect(() => {
+    if (role !== 'CompanyOperator' || !companyId || companyName) return
+
+    let active = true
+    getCompany(companyId)
+      .then((company) => active && setCompanyName(company.name))
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [role, companyId, companyName, setCompanyName])
 
   return (
     <div className="min-h-screen bg-slate-100">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
           <div className="flex items-center gap-8">
-            <span className="text-lg font-bold text-slate-800">PVV Admin</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-lg font-bold text-slate-800">PVV Admin</span>
+              {companyName ? (
+                <span className="text-sm font-semibold text-blue-700">{companyName}</span>
+              ) : null}
+            </div>
             <nav className="flex gap-1">
               {tabs.map((tab) => (
                 <NavLink
