@@ -71,9 +71,11 @@ export function EmissionResult({
             Generamos el cupón, pero el pago todavía no se acreditó.
             {paymentDeadline ? ` Tenés hasta el ${paymentDeadline} para pagarlo.` : ''}
           </p>
+          {/* Deliberately promises no notification: the system does not send email, and
+              telling a buyer we will write to them would be a lie the code cannot keep. */}
           <p className={styles.subtitle}>
-            Cuando se acredite, emitimos tu póliza automáticamente y te avisamos por mail.
-            No hace falta que vuelvas a comprar.
+            Cuando se acredite, emitimos tu póliza automáticamente. No hace falta que
+            vuelvas a comprar.
           </p>
           <div className={styles.buttons}>
             <Button variant="primary" onClick={onHome}>
