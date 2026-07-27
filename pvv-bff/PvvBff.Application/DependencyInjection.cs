@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using PvvBff.Application.Ingress;
+using PvvBff.Application.Leads;
 using PvvBff.Application.Payments;
 
 namespace PvvBff.Application;
@@ -25,6 +26,11 @@ public static class DependencyInjection
         services.AddScoped<IInternalIngressHandler, QuoteHandler>();
         services.AddScoped<IInternalIngressHandler, BudgetCalcHandler>();
         services.AddScoped<IInternalIngressHandler, EmissionStatusHandler>();
+        services.AddScoped<IInternalIngressHandler, LeadEventHandler>();
+
+        // Leads (HU-07) — the single event → funnel mapping, shared by the ingress
+        // handler and the server-side producers (payments, emission, abandonment).
+        services.AddScoped<ILeadProjectionService, LeadProjectionService>();
 
         return services;
     }

@@ -6,6 +6,7 @@ using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using PvvBff.Application.Abstractions;
 using PvvBff.Infrastructure.Ingress;
+using PvvBff.Infrastructure.Leads;
 using PvvBff.Infrastructure.Messaging;
 using PvvBff.Infrastructure.Payments;
 using StackExchange.Redis;
@@ -41,6 +42,12 @@ public static class DependencyInjection
                 sp.GetRequiredService<IMongoClient>().GetDatabase("pvv_bff_db"));
             services.AddScoped<IPaymentRepository, MongoPaymentRepository>();
             services.AddHostedService<AbandonmentDetectionJob>();
+
+            // Leads (HU-07) — funnel view + raw event log.
+            services.Configure<LeadOptions>(configuration.GetSection(LeadOptions.SectionName));
+            services.AddScoped<ILeadStore, MongoLeadStore>();
+            services.AddScoped<IEventLogStore, MongoEventLogStore>();
+            services.AddHostedService<MongoIndexInitializer>();
         }
 
         // Ingress (HU-06) — route store, in-process proxy, company-config reader,
@@ -63,8 +70,6 @@ public static class DependencyInjection
         // Messaging (HU-08/8B) — RabbitMQ publisher for emission jobs.
         services.Configure<RabbitMqOptions>(configuration.GetSection(RabbitMqOptions.SectionName));
         services.AddSingleton<IEmissionPublisher, RabbitMqEmissionPublisher>();
-
-        // TODO HU-07: Mongo lead repositories.
 
         return services;
     }

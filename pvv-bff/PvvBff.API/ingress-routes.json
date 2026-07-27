@@ -55,6 +55,13 @@
       "endpoint": "internal://payment-init",
       "timeoutSeconds": 10,
       "targetService": "pvv-bff"
+    },
+    {
+      "hash": "LEAD_EVENT",
+      "method": "POST",
+      "endpoint": "internal://lead-event",
+      "timeoutSeconds": 5,
+      "targetService": "pvv-bff"
     }
   ]
 }
