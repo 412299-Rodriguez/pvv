@@ -141,8 +141,16 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
 
   return (
     <div>
-      {/* Neither end of the journey is a step, so both are numbers, not tabs. */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-3 lg:max-w-3xl">
+      {/*
+        The universe first, then the two ends of the journey. Neither end is a
+        step, which is why they are numbers here and not tabs below.
+      */}
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatTile
+          label="Total de leads"
+          value={formatCount(funnel?.totalLeads ?? 0)}
+          hint="Del que solo entró al que compró"
+        />
         <StatTile
           label="Solo entraron"
           value={formatCount(breakdown(NEVER_STARTED_STEP)?.total ?? 0)}
@@ -151,7 +159,7 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
         <StatTile
           label="Terminaron comprando"
           value={formatCount(funnel?.completed ?? 0)}
-          hint={`de ${formatCount(funnel?.totalLeads ?? 0)} visitas`}
+          hint="Con la póliza emitida"
         />
         <StatTile
           label="Conversión"
