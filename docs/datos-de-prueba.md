@@ -35,7 +35,7 @@ Sin el worker el pago se confirma pero la póliza nunca se emite.
 | `superadmin@pvv.com` | `Super123!` | SystemAdmin | Alta de compañías y operadores. **No** ve leads ni config de inquilinos |
 | `admin@segucor.com` | `Segu123!` | CompanyOperator | Solo SeguCor |
 | `operador@rivadavia.com` | `Riva123!` | CompanyOperator | Solo Seguros Rivadavia |
-| `admin@vehisegur.com` | *(la definida al crearlo)* | CompanyOperator | Solo VehiSegur |
+| `admin@vehisegur.com` | `Vehi123!` | CompanyOperator | Solo VehiSegur |
 
 El superadmin es administrador de plataforma: crea compañías y sus operadores, y
 nada más. La configuración y los leads de cada compañía son de su propio operador.
@@ -153,7 +153,100 @@ vas a ver el lead pasar a abandonado y volver a activo. Es el comportamiento cor
 
 ---
 
-## 8. Comandos útiles
+## 8. Casos borde
+
+Los caminos que no son la compra feliz. Cada uno existe porque en algún momento se
+comportó mal, y son los que conviene volver a recorrer después de tocar el flujo.
+
+### El vehículo no se puede cotizar
+
+Hay **dos maneras distintas** de llegar al mismo callejón, y el comprador ve el mismo
+mensaje en las dos: *"No tenemos una cobertura para este vehículo"*, sin botones.
+
+| Cómo llegar | Qué pasa por detrás |
+|---|---|
+| Patente `VWX985` en el portal de SeguCor | El auto es de 1985 y las reglas cubren 2000–2030. `QUOTE` responde **200 con lista vacía**: el vehículo existe, esta compañía no tiene precio para él |
+| Cualquier patente en el portal de Rivadavia o VehiSegur | No tienen productos cargados. `QUOTE` responde **404** |
+
+El vehículo del primer caso no viene del seed: se insertó a mano para poder forzarlo
+(§9 tiene el comando). Sin él no hay forma de provocar la lista vacía, porque todos los
+vehículos sembrados caen dentro del rango de años configurado.
+
+Antes esto dejaba la pantalla **en blanco**, sin mensaje ni salida, y el 404 mostraba
+"intentá de nuevo en unos segundos" — un consejo que nunca podía funcionar. Vale la
+pena verificar que ninguno de los dos vuelva a ese estado.
+
+### Patente inexistente
+
+Escribir cualquier patente inventada, por ejemplo `KKK222`. `PLATE_SEARCH` responde 404
+y el portal avisa *"No encontramos ese vehículo"*. Deja lead en **paso 1** con un
+`wizard_error`: el intento se registra aunque no haya vehículo.
+
+### Renovación
+
+`AC123BD` tiene póliza vigente del seed. Abre el modal de renovación, y si se confirma,
+la póliza nueva arranca **cuando termina la vigente** (fecha futura), con número nuevo.
+No devuelve la póliza vieja: quien paga una renovación tiene que recibir una póliza real.
+
+### Pago rechazado
+
+Llegar al checkout simulado y apretar **Rechazar**. El paso 4 queda en `rejected` y el
+lead sigue **activo**, no abandonado: la persona puede reintentar el pago.
+
+### Checkout abandonado
+
+Llegar al checkout simulado y cerrar la pestaña sin responder. Pasados los minutos de
+`Payments:AbandonmentTtlMinutes`, la transacción queda `Abandoned` y el lead abandonado
+en el paso 4. Es el caso que alimenta el recupero por email.
+
+### Un lead abandonado que vuelve
+
+Dejar una compra quieta más de un minuto (queda abandonada) y después continuarla. El
+lead vuelve a **activo** y se le borra la fecha de abandono. El abandono es una
+inferencia por silencio; un evento nuevo la desmiente.
+
+### Lead sin forma de contacto
+
+En **Paso 1 / Abandonaron** el botón **Recuperar** no aparece: esos leads se fueron
+antes de dejar un mail. Sí aparece de Paso 2 en adelante.
+
+### Aislamiento entre compañías
+
+Un operador solo alcanza lo suyo, y no puede ampliarlo desde la URL. El superadmin no
+alcanza los datos de ningún inquilino. Comprobado en la API:
+
+```
+operador → sus leads / su config                200
+operador → config de otra compañía              403
+operador → listado de compañías                 403
+superadmin → compañías y operadores             200
+superadmin → leads, embudo, config de inquilino 403
+```
+
+La prueba más completa es de punta a punta: cargarle productos a VehiSegur, comprar en
+**su** portal, y confirmar que ese lead aparece en su dashboard y **no** en el de SeguCor.
+
+### Reglas de precio huérfanas
+
+Borrar un producto que tenía precios cargados. Sus reglas siguen guardadas y aparecen
+agrupadas bajo **"Sin producto asociado"**, en vez de desaparecer de la pantalla
+mientras se siguen guardando.
+
+### Emisión contada una sola vez
+
+La pantalla de resultado consulta el estado en bucle, y en desarrollo React monta el
+efecto dos veces, así que hay dos consultas en paralelo. La emisión tiene que quedar
+registrada **una sola vez** en el historial del lead. Se verifica mirando que
+`policy_issued` aparezca una vez sola en `event_logs`.
+
+### Una compra deja un lead, no tres
+
+Una compra son tres cargas de página — wizard, checkout, resultado. Solo la primera
+cuenta como visita. Después de una compra completa, el total de leads sube en **uno**.
+
+---
+
+## 9. Comandos útiles
 
 **Ver los últimos leads**
 
@@ -188,7 +281,7 @@ Tipos válidos: `Car`, `Motorcycle`, `Truck`, `Van`.
 
 ---
 
-## 9. Notas
+## 10. Notas
 
 - El pago usa un **checkout simulado propio** (`/mock-checkout`), no Mercado Pago real.
   Los botones Aprobar y Rechazar llaman al mismo webhook que usaría el proveedor.
