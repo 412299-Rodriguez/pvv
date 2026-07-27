@@ -183,7 +183,10 @@ public sealed class LeadProjectionService : ILeadProjectionService
             fields,
             minLastStep,
             status,
-            onlyIfNotCompleted);
+            onlyIfNotCompleted,
+            // An event that does not dictate a status is the visitor still
+            // working, which contradicts an earlier abandonment.
+            RevivesLead: status is null);
     }
 
     private static string? Text(LeadEvent e, string key) =>
