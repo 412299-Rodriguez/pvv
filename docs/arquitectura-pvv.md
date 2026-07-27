@@ -227,6 +227,8 @@ Las rutas (`ingress-routes.json`) se siembran en Redis al arrancar el BFF via `I
 | `PAYMENT_INIT` | POST | Mercado Pago: iniciar checkout |
 | `CONFIG_LOAD` | GET | pvv-config (vía Redis): cargar config de compañía |
 | `LEAD_EVENT` | POST | BFF interno: registrar evento de wizard |
+| `QUOTE` | POST | BFF interno: arma las coberturas desde PRODUCT_CONFIG + PRICING_CONFIG |
+| `EMISSION_STATUS` | POST | BFF interno: estado del pago y de la emisión (lo consulta la pantalla de resultado) |
 
 ### 3.3 LeadProjection — Vista Materializada de Leads
 
@@ -250,7 +252,21 @@ Evento "payment_abandoned" →
 - `$set` con dot-notation (actualización parcial sin reemplazar documento)
 - `$setOnInsert` (defaults solo al crear el documento)
 - `$max` (lastStep solo sube, nunca baja)
-- `$cond` (no sobreescribir "completed" con "abandoned")
+- Para no pisar un lead ya completado, la transición a `abandoned` **filtra por
+  estado** en vez de usar `$cond`: misma garantía con una condición en el filtro y
+  sin necesidad de un update por pipeline.
+
+**Dos datos que responden preguntas distintas.** `lastStep` es **hasta dónde llegó**
+el visitante, y sube apenas se alcanza un paso: quien escribió su documento ya está
+en el paso del tomador, lo termine o no. `steps.stepN.status` es **si ese paso se
+completó** (`started` / `completed`), que es lo que separa "nos dio un documento" de
+"nos dio cómo contactarlo" — la diferencia que decide si un lead es recuperable.
+
+**El abandono es una inferencia por silencio, y se puede desmentir.** Un barrido
+periódico marca como abandonado lo que lleva N minutos sin actividad, tanto a nivel
+de pago (transacción pendiente vencida) como a nivel de lead (cualquiera que quedó
+quieto, incluso sin haber llegado nunca al pago). Si después llega un evento nuevo,
+el lead **vuelve a activo**: la persona pausó y siguió, no abandonó.
 
 **Estructura del Lead en MongoDB:**
 ```
@@ -298,6 +314,29 @@ Request → ExceptionHandler → CORS → Auth
 4. Mercado Pago llama al webhook `POST /api/payments/webhook` → BFF confirma el pago
 5. BFF actualiza el lead como `payment_confirmed` → publica evento a RabbitMQ para que pvv-emission emita la póliza
 6. **Detección de abandono:** job periódico que busca transacciones `pending` con más de N minutos → las marca como `payment_abandoned` y actualiza el lead
+
+### 3.7 Lectura de leads para pvv-admin
+
+Los leads viven en el MongoDB del BFF, así que el panel los lee de acá y no de
+pvv-config. Dos endpoints: `GET /api/leads/funnel` (embudo y totales) y
+`GET /api/leads` (tabla paginada, con filtros por paso, estado y fechas).
+
+**Van por fuera de `/api/ingress`.** Ese pipeline existe para el visitante anónimo
+del portal — fingerprint, Turnstile, sesión anónima, rate limit. Quien consulta acá
+es un operador autenticado, así que le corresponde un controller normal con
+`[Authorize]`.
+
+**El problema de autorización y cómo se resolvió.** Un lead se guarda con el
+`HashedCompanyId` de la compañía, que es lo único que el BFF conoce del inquilino;
+pero el JWT del operador traía el `companyId` (el Guid de SQL), y el BFF no puede
+pasar de uno al otro porque la clave de cifrado vive en pvv-config. La solución fue
+que **pvv-config emita el `companyToken` como un claim firmado más** dentro del JWT.
+El BFF acota cada consulta a ese claim y a nada más: un operador no puede ampliarlo
+por query string, y el SystemAdmin —que no lleva ese claim— no llega a ningún lead.
+
+El embudo se resuelve con una sola agregación (`$facet`) que devuelve en un viaje el
+corte por paso alcanzado, por estado, y por dónde se frenó cada intento cruzado con
+su resultado. Ese último corte es el que alimenta los contadores de las tabs.
 
 ---
 
@@ -509,19 +548,31 @@ Auto-retry en 5xx con backoff (300ms, 800ms).
 
 Eventos rastreados para alimentar el dashboard de pvv-admin:
 
-| Evento | Cuándo se dispara |
-|---|---|
-| `session_start` | Al cargar el portal |
-| `plate_entered` | Al tipear la patente |
-| `plate_validated` | Al encontrar el vehículo |
-| `holder_completed` | Al completar datos del tomador |
-| `budget_calculated` | Al ver las cotizaciones |
-| `product_selected` | Al elegir una opción |
-| `payment_initiated` | Al ir al checkout de MP |
-| `payment_confirmed` | Webhook confirmó el pago |
-| `payment_abandoned` | Usuario salió sin pagar |
-| `policy_issued` | Póliza emitida exitosamente |
-| `wizard_error` | Error en cualquier paso |
+Cada evento tiene un **origen**, y la división no es arbitraria: el frontend solo
+reporta lo que el navegador puede observar. Todo lo que ocurre después de que el
+usuario es redirigido al checkout lo registra el BFF por su cuenta, porque en ese
+punto la página se pierde y puede no volver nunca.
+
+| Evento | Origen | Cuándo se dispara |
+|---|---|---|
+| `session_start` | front | Al cargar el portal — **solo en el wizard**, no en el checkout ni en la pantalla de resultado, que son cargas de página de una compra ya empezada |
+| `plate_entered` | front | Al apretar "Cotizar" |
+| `plate_validated` | front | Al encontrar el vehículo |
+| `document_entered` | front | Al continuar desde la pantalla de documento |
+| `holder_completed` | front | Al completar datos del tomador |
+| `budget_calculated` | front | Al ver las cotizaciones |
+| `product_selected` | front | Al elegir una opción |
+| `wizard_error` | front | Error en cualquier paso |
+| `payment_initiated` | **BFF** | Dentro de `PAYMENT_INIT`, que es donde existen el id de transacción y la preferencia |
+| `payment_confirmed` | **BFF** | Webhook confirmó el pago |
+| `payment_rejected` | **BFF** | Webhook rechazó el pago — el lead sigue activo, puede reintentar |
+| `payment_abandoned` | **BFF** | Job periódico: transacción pendiente vencida |
+| `policy_issued` | **BFF** | Al consultar el estado y ver la póliza emitida |
+| `emission_failed` | **BFF** | Ídem, con la emisión fallida o sin reintentos |
+
+El puente entre ambos mundos es el **`flowId`**: el front lo genera por intento de
+compra y lo envía en `PAYMENT_INIT`, donde queda guardado en la transacción. Desde
+ahí el BFF resuelve a qué lead pertenece cada hecho sin depender del navegador.
 
 ### 6.6 State Management (Zustand)
 
@@ -539,10 +590,15 @@ Stores por feature (no un store global):
 
 **pvv-admin es lo que ven los operadores de cada compañía aseguradora.** Tiene dos funciones muy distintas: configurar el portal y medir su rendimiento.
 
-**Qué hace un operador acá:**
+**Dos roles con alcances que no se superponen.** El **SystemAdmin** es administrador
+de plataforma: da de alta compañías y sus operadores, y entrega el link del portal.
+No ve los leads ni la configuración de ningún inquilino. El **CompanyOperator**
+configura y mide su propia compañía, y nada más. La separación está impuesta en el
+backend, no escondiendo botones.
+
+**Qué hace un operador de compañía acá:**
 
 **Configuración (gestión):**
-- Da de alta su compañía en el sistema y obtiene el token que va en la URL del portal.
 - Crea y gestiona sus productos de seguro: qué coberturas ofrece, a qué precio, para qué tipos de vehículo.
 - Personaliza la apariencia de su portal: colores de la marca, logo, textos de cada pantalla del wizard.
 
@@ -562,24 +618,39 @@ React 19, TypeScript 5 (strict), Vite 6, Tailwind CSS v4, Zustand, React Router.
 ### 7.2 Módulos
 
 **Gestión (CRUD)**
-- ABM de compañías aseguradoras
-- ABM de productos por compañía
-- ABM de reglas de precio por producto
-- Configuración de apariencia del portal (colores, logo, textos)
+- ABM de compañías aseguradoras y de sus operadores — **solo SystemAdmin**
+- ABM de productos y de reglas de precio — solo el operador de esa compañía
+- Configuración de apariencia del portal (colores, logo, textos) — ídem
 
 **Dashboard de Analytics**
-- Embudo de conversión de 5 pasos (trapezoides) con tasas por etapa
-- KPIs: total leads, tasa de conversión global, pólizas emitidas
-- Actualización periódica (auto-refresh cada 5 minutos)
+- Embudo de conversión de 5 pasos con tasas por etapa, **como barras horizontales
+  sobre una escala compartida**. Se descartaron los trapezoides: con un trapecio el
+  lector compara áreas, y el área exagera la caída entre etapas
+- Las etapas usan una **rampa ordinal** (un solo tono, de claro a oscuro) y no cinco
+  colores: el largo de la barra ya expresa la magnitud, y darle además un color por
+  etapa sería codificar dos veces lo mismo
+- KPIs: total de leads, tasa de conversión global, pólizas emitidas, abandonados
+- Auto-refresh cada 5 minutos, más recarga manual
 
 **Tabla de Leads**
-- Paginada, filtros por: paso del embudo, rango de fechas, estado, método de pago
-- 4 tabs según paso donde quedó el lead
-- Exportación a Excel (hasta 10.000 filas con paginación automática)
+- Una tab por **paso donde se frenó** el intento (pasos 1 a 4). El paso 5 no tiene tab:
+  llegar ahí significa que la póliza se emitió, o sea que el lead no se frenó en ningún
+  lado. Los compradores y los que entraron sin buscar nada son tarjetas, no tabs
+- Dentro de cada tab, subfiltro por resultado: abandonaron / en curso
+- Paginada, con filtro de rango de fechas común a toda la pantalla
+- **Exportación a CSV** (hasta 10.000 filas, recorriendo las páginas). Separado por
+  punto y coma y con BOM UTF-8, que es lo que Excel en español espera; con coma mete
+  toda la fila en una columna y sin BOM rompe los acentos. Se prefirió CSV sobre
+  `.xlsx` para no sumar una dependencia al frontend
+- No hay filtro por método de pago: hoy existe uno solo
 
 **Recupero de Abandono**
-- Leads con `status = abandoned` y `steps.step4.status = payment_abandoned` son identificados automáticamente
-- Acción de contacto por email directo desde la tabla (abre modal con template pre-cargado)
+- La acción aparece únicamente en leads abandonados **que dejaron un email**; sin
+  forma de contacto no hay nada que recuperar
+- El modal arma el mensaje con lo que el lead ya contó (patente, vehículo, producto y
+  precio cotizado) e incluye el link de vuelta al portal
+- El envío sale por el cliente de correo del operador vía `mailto:`, no por un SMTP
+  propio: así la respuesta le llega a su bandeja y el mensaje sale de su dirección real
 
 ---
 
