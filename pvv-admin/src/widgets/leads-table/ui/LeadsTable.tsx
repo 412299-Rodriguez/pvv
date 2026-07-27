@@ -16,60 +16,68 @@ interface LeadsTableProps {
 export function LeadsTable({ leads, onRecover }: LeadsTableProps) {
   if (leads.length === 0) {
     return (
-      <p className="py-12 text-center text-sm text-slate-500">
-        No hay leads que coincidan con estos filtros.
-      </p>
+      <div className="px-5 py-16 text-center">
+        <p className="text-sm font-medium text-slate-600">No hay leads acá</p>
+        <p className="mt-1 text-sm text-slate-400">
+          Probá con otro paso o cambiá el período.
+        </p>
+      </div>
     )
   }
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[52rem] text-sm">
+      <table className="w-full min-w-[56rem] text-sm">
         <thead>
-          <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
-            <th className="py-2 pr-3 font-semibold">Fecha</th>
-            <th className="py-2 pr-3 font-semibold">Llegó hasta</th>
-            <th className="py-2 pr-3 font-semibold">Vehículo</th>
-            <th className="py-2 pr-3 font-semibold">Contacto</th>
-            <th className="py-2 pr-3 font-semibold">Producto</th>
-            <th className="py-2 pr-3 font-semibold">Estado</th>
-            <th className="py-2 font-semibold" />
+          <tr className="border-y border-slate-200 bg-slate-50/60 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <th className="py-2.5 pl-5 pr-3">Fecha</th>
+            <th className="py-2.5 pr-3">Llegó hasta</th>
+            <th className="py-2.5 pr-3">Vehículo</th>
+            <th className="py-2.5 pr-3">Contacto</th>
+            <th className="py-2.5 pr-3">Producto</th>
+            <th className="py-2.5 pr-3">Estado</th>
+            <th className="py-2.5 pr-5" />
           </tr>
         </thead>
         <tbody>
           {leads.map((lead) => (
-            <tr key={lead.flowId} className="border-b border-slate-100 align-top hover:bg-slate-50">
-              <td className="py-3 pr-3 whitespace-nowrap text-slate-600 tabular-nums">
+            <tr
+              key={lead.flowId}
+              className="border-b border-slate-100 align-top transition-colors last:border-0 hover:bg-slate-50"
+            >
+              <td className="py-3.5 pl-5 pr-3 whitespace-nowrap text-slate-500 tabular-nums">
                 {formatDateTime(lead.createdAt)}
               </td>
 
-              <td className="py-3 pr-3">
+              <td className="py-3.5 pr-3">
                 <StepBadge lastStep={lead.lastStep} />
               </td>
 
-              <td className="py-3 pr-3">
-                <div className="font-medium text-slate-800">{orDash(lead.plate)}</div>
+              <td className="py-3.5 pr-3">
+                <div className="font-semibold text-slate-800">{orDash(lead.plate)}</div>
                 {lead.vehicleTitle ? (
-                  <div className="text-xs text-slate-500">{lead.vehicleTitle}</div>
+                  <div className="mt-0.5 text-xs text-slate-500">{lead.vehicleTitle}</div>
                 ) : null}
               </td>
 
-              <td className="py-3 pr-3">
+              <td className="py-3.5 pr-3">
                 <div className="font-medium text-slate-800">{orDash(lead.holderName)}</div>
-                {lead.email ? <div className="text-xs text-slate-500">{lead.email}</div> : null}
-                {lead.phone ? <div className="text-xs text-slate-500">{lead.phone}</div> : null}
+                {lead.email ? (
+                  <div className="mt-0.5 text-xs text-slate-500">{lead.email}</div>
+                ) : null}
+                {lead.phone ? <div className="text-xs text-slate-400">{lead.phone}</div> : null}
               </td>
 
-              <td className="py-3 pr-3">
+              <td className="py-3.5 pr-3">
                 <div className="text-slate-700">{orDash(lead.productName)}</div>
                 {lead.amount !== null ? (
-                  <div className="text-xs text-slate-500 tabular-nums">
+                  <div className="mt-0.5 text-xs font-semibold text-slate-600 tabular-nums">
                     {formatMoney(lead.amount)}
                   </div>
                 ) : null}
               </td>
 
-              <td className="py-3 pr-3">
+              <td className="py-3.5 pr-3">
                 <StatusBadge status={lead.status} paymentStatus={lead.paymentStatus} />
                 {lead.policyNumber ? (
                   <div className="mt-1 text-xs text-slate-500 tabular-nums">
@@ -78,12 +86,12 @@ export function LeadsTable({ leads, onRecover }: LeadsTableProps) {
                 ) : null}
               </td>
 
-              <td className="py-3 text-right">
+              <td className="py-3.5 pr-5 text-right">
                 {onRecover && isRecoverable(lead) ? (
                   <button
                     type="button"
                     onClick={() => onRecover(lead)}
-                    className="whitespace-nowrap rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                    className="whitespace-nowrap rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
                   >
                     Recuperar
                   </button>

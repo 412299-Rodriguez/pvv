@@ -12,8 +12,16 @@ import {
 } from '@/entities/lead'
 import { useSessionStore } from '@/entities/session'
 import { RecoveryModal } from '@/features/lead-recovery'
-import { Card, RefreshButton, StatTile } from '@/shared/ui'
-import { formatCount, formatPercent } from '@/shared/ui/viz'
+import {
+  Card,
+  CheckBadgeIcon,
+  DoorIcon,
+  RefreshButton,
+  StatTile,
+  TrendingUpIcon,
+  UsersIcon,
+} from '@/shared/ui'
+import { FUNNEL_RAMP, formatCount, formatPercent } from '@/shared/ui/viz'
 import { portalUrl, presetToFilter, type RangePreset } from '@/shared/lib'
 import { DateRangeFilter } from '@/widgets/date-range-filter'
 import { LeadsTable } from '@/widgets/leads-table'
@@ -147,22 +155,30 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
         The universe first, then the two ends of the journey. Neither end is a
         step, which is why they are numbers here and not tabs below.
       */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Total de leads" value={formatCount(funnel?.totalLeads ?? 0)} />
+      <div className="mb-6 grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatTile
+          label="Total de leads"
+          value={formatCount(funnel?.totalLeads ?? 0)}
+          icon={<UsersIcon className="h-4 w-4" />}
+        />
         <StatTile
           label="Solo entraron"
           value={formatCount(breakdown(NEVER_STARTED_STEP)?.total ?? 0)}
           hint="No llegaron a buscar un vehículo"
+          icon={<DoorIcon className="h-4 w-4" />}
         />
         <StatTile
           label="Terminaron comprando"
           value={formatCount(funnel?.completed ?? 0)}
           hint="Con la póliza emitida"
+          icon={<CheckBadgeIcon className="h-4 w-4" />}
+          tone="success"
         />
         <StatTile
           label="Conversión"
           value={formatPercent(funnel?.overallConversion ?? 0)}
           hint="Del portal a la póliza"
+          icon={<TrendingUpIcon className="h-4 w-4" />}
         />
       </div>
 
@@ -170,109 +186,123 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
         <RefreshButton onClick={() => setReload((n) => n + 1)} busy={stale} />
       </DateRangeFilter>
 
-      {/* Where the journey ended. */}
-      <div className="mb-3 flex flex-wrap gap-1 border-b border-slate-200">
-        {STOP_TABS.map((tab) => {
-          const count = breakdown(tab.step)?.total ?? 0
-          return (
-            <button
-              key={tab.step}
-              type="button"
-              onClick={() => changeFilter(() => setStep(tab.step))}
-              className={`-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-semibold transition ${
-                step === tab.step
-                  ? 'border-blue-600 text-blue-700'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {tab.label}
-              <span
-                className={`rounded-full px-1.5 py-0.5 text-xs tabular-nums ${
-                  step === tab.step ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-500'
-                }`}
-              >
-                {formatCount(count)}
-              </span>
-            </button>
-          )
-        })}
-      </div>
+      {error ? (
+        <Card className="mb-4 border-red-200 bg-red-50 text-sm text-red-700">{error}</Card>
+      ) : null}
 
-      {/* What happened to them, and the export for exactly this slice. */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1">
-          {OUTCOME_FILTERS.map((option) => {
-            const stats = breakdown(step)
-            const count = option.value === 'abandoned' ? stats?.abandoned : stats?.active
+      {/*
+        Tabs, outcome and table live in ONE card: they are one object, and the
+        tab strip reaches the edges so it reads as part of it.
+      */}
+      <Card padded={false} className={stale ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
+        {/* Where the journey ended. The dot repeats the funnel's ordinal ramp,
+            so a step is the same colour here, in the chart and in the rows. */}
+        <div className="flex flex-wrap gap-1 overflow-x-auto border-b border-slate-200 px-3 pt-2">
+          {STOP_TABS.map((tab) => {
+            const active = step === tab.step
             return (
               <button
-                key={option.value}
+                key={tab.step}
                 type="button"
-                onClick={() => changeFilter(() => setOutcome(option.value))}
-                className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
-                  outcome === option.value
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-slate-600 hover:bg-slate-100'
+                onClick={() => changeFilter(() => setStep(tab.step))}
+                className={`-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-semibold transition ${
+                  active
+                    ? 'border-blue-600 text-blue-700'
+                    : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
                 }`}
               >
-                {option.label}
-                <span className="ml-1.5 text-xs tabular-nums opacity-70">
-                  {formatCount(count ?? 0)}
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: FUNNEL_RAMP[tab.step - 1] ?? FUNNEL_RAMP[0] }}
+                  aria-hidden
+                />
+                {tab.label}
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-xs font-semibold tabular-nums ${
+                    active ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-500'
+                  }`}
+                >
+                  {formatCount(breakdown(tab.step)?.total ?? 0)}
                 </span>
               </button>
             )
           })}
         </div>
 
-        <button
-          type="button"
-          onClick={handleExport}
-          disabled={exporting}
-          title="Exportar esta lista a CSV"
-          aria-label="Exportar esta lista a CSV"
-          className="rounded-lg border border-slate-300 bg-white p-2 text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
-        >
-          {exporting ? <SpinnerIcon /> : <DownloadIcon />}
-        </button>
-      </div>
-
-      {error ? (
-        <Card className="mb-4 border-red-200 bg-red-50 text-sm text-red-700">{error}</Card>
-      ) : null}
-
-      {data === null ? (
-        <p className="py-12 text-center text-sm text-slate-500">Cargando leads…</p>
-      ) : (
-        <Card className={stale ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-          <LeadsTable leads={data.items} onRecover={setRecovering} />
-
-          {total > 0 ? (
-            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
-              <span className="text-sm text-slate-500 tabular-nums">
-                {formatCount(firstRow)}–{formatCount(lastRow)} de {formatCount(total)}
-              </span>
-              <div className="flex gap-2">
+        {/* What happened to them, and the export for exactly this slice. */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+          {/* Segmented, so it reads as "one of these two" — there is no "all". */}
+          <div className="inline-flex rounded-lg border border-slate-300 bg-slate-50 p-0.5">
+            {OUTCOME_FILTERS.map((option) => {
+              const stats = breakdown(step)
+              const count = option.value === 'abandoned' ? stats?.abandoned : stats?.active
+              const active = outcome === option.value
+              return (
                 <button
+                  key={option.value}
                   type="button"
-                  disabled={page === 1}
-                  onClick={() => setPage((current) => current - 1)}
-                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  onClick={() => changeFilter(() => setOutcome(option.value))}
+                  className={`rounded-md px-3 py-1.5 text-sm font-semibold transition ${
+                    active
+                      ? 'bg-white text-slate-800 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
                 >
-                  Anterior
+                  {option.label}
+                  <span className="ml-1.5 text-xs tabular-nums opacity-60">
+                    {formatCount(count ?? 0)}
+                  </span>
                 </button>
-                <button
-                  type="button"
-                  disabled={!hasNext}
-                  onClick={() => setPage((current) => current + 1)}
-                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Siguiente
-                </button>
+              )
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={exporting}
+            title="Exportar esta lista a CSV"
+            aria-label="Exportar esta lista a CSV"
+            className="rounded-lg border border-slate-300 bg-white p-2 text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+          >
+            {exporting ? <SpinnerIcon /> : <DownloadIcon />}
+          </button>
+        </div>
+
+        {data === null ? (
+          <p className="py-16 text-center text-sm text-slate-500">Cargando leads…</p>
+        ) : (
+          <>
+            <LeadsTable leads={data.items} onRecover={setRecovering} />
+
+            {total > 0 ? (
+              <div className="flex items-center justify-between border-t border-slate-200 px-5 py-3">
+                <span className="text-sm text-slate-500 tabular-nums">
+                  {formatCount(firstRow)}–{formatCount(lastRow)} de {formatCount(total)}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={page === 1}
+                    onClick={() => setPage((current) => current - 1)}
+                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!hasNext}
+                    onClick={() => setPage((current) => current + 1)}
+                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Siguiente
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : null}
-        </Card>
-      )}
+            ) : null}
+          </>
+        )}
+      </Card>
 
       {recovering ? (
         <RecoveryModal
