@@ -24,12 +24,19 @@ public sealed class MongoPaymentRepository : IPaymentRepository
         _collection.ReplaceOneAsync(t => t.Id == transaction.Id, transaction, cancellationToken: ct);
 
     // Targeted update rather than a full replace: the emission worker writes its
-    // own fields on this same document.
-    public Task MarkEmissionProjectedAsync(string id, DateTime at, CancellationToken ct) =>
-        _collection.UpdateOneAsync(
-            t => t.Id == id,
+    // own fields on this same document. Matching only an unstamped transaction
+    // makes this a compare-and-set — exactly one concurrent caller modifies it.
+    public async Task<bool> TryClaimEmissionProjectionAsync(string id, DateTime at, CancellationToken ct)
+    {
+        var result = await _collection.UpdateOneAsync(
+            Builders<PaymentTransaction>.Filter.And(
+                Builders<PaymentTransaction>.Filter.Eq(t => t.Id, id),
+                Builders<PaymentTransaction>.Filter.Eq(t => t.EmissionProjectedAt, null)),
             Builders<PaymentTransaction>.Update.Set(t => t.EmissionProjectedAt, at),
             cancellationToken: ct);
+
+        return result.ModifiedCount == 1;
+    }
 
     public async Task<IReadOnlyList<PaymentTransaction>> MarkAbandonedAsync(DateTime olderThan, CancellationToken ct)
     {

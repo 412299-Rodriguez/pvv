@@ -19,8 +19,12 @@ public interface IPaymentRepository
     Task<IReadOnlyList<PaymentTransaction>> MarkAbandonedAsync(DateTime olderThan, CancellationToken ct);
 
     /// <summary>
-    /// Stamps the transaction as having had its emission outcome projected onto
-    /// the lead, so repeated status polls do not project it again.
+    /// Claims the right to project this transaction's emission outcome onto its
+    /// lead, and returns whether the caller won it.
+    ///
+    /// The claim is the write itself — it only matches a transaction that has
+    /// not been stamped yet — so concurrent status polls cannot both decide they
+    /// are the first. Checking a flag and then setting it would let them.
     /// </summary>
-    Task MarkEmissionProjectedAsync(string id, DateTime at, CancellationToken ct);
+    Task<bool> TryClaimEmissionProjectionAsync(string id, DateTime at, CancellationToken ct);
 }

@@ -90,6 +90,11 @@ public sealed class EmissionStatusHandler : IInternalIngressHandler
         if (eventName is null)
             return;
 
+        // Claim BEFORE projecting. The result page polls, and two polls in flight
+        // together would both pass the check above; only one wins the write.
+        if (!await _repository.TryClaimEmissionProjectionAsync(tx.Id, DateTime.UtcNow, ct))
+            return;
+
         await _leads.ProjectAsync(
             new LeadEvent(
                 eventName,
@@ -102,8 +107,6 @@ public sealed class EmissionStatusHandler : IInternalIngressHandler
                 },
                 DateTime.UtcNow),
             ct);
-
-        await _repository.MarkEmissionProjectedAsync(tx.Id, DateTime.UtcNow, ct);
     }
 
     private static string ReadString(JsonElement? body, string key) =>
