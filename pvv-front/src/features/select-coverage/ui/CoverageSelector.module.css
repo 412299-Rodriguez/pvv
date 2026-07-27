@@ -19,6 +19,28 @@
   padding: 48px 0;
 }
 
+/* Shown when the quote comes back with nothing to offer, so the step never
+   ends in a blank area the buyer cannot act on. */
+.empty {
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e6e6e6);
+  border-radius: var(--radius-lg, 14px);
+  padding: 32px 24px;
+  text-align: center;
+}
+.emptyTitle {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.emptyText {
+  font-size: 14px;
+  color: var(--color-text-muted, #6b6b6b);
+  margin: 0 auto 18px;
+  max-width: 40ch;
+  line-height: 1.5;
+}
+
 .grid {
   display: grid;
   grid-template-columns: 1fr;
