@@ -36,9 +36,19 @@ public sealed class PaymentInitHandler : IInternalIngressHandler
 
         var transactionId = Guid.NewGuid().ToString("N");
         var flowId = ReadOptionalString(context.Body, "flowId");
+        var vehicleTitle = ReadOptionalString(context.Body, "vehicleTitle");
+        var holderName = ReadOptionalString(context.Body, "holderName");
+
+        // With the real gateway this string is the item title the buyer reads on
+        // Mercado Pago's own checkout, so it is written for them. The product name
+        // does not reach this handler (PAYMENT_INIT only carries the budget), so
+        // the vehicle is what identifies the purchase.
+        var description = string.IsNullOrWhiteSpace(vehicleTitle)
+            ? "Seguro vehicular"
+            : $"Seguro para {vehicleTitle}";
 
         var preference = await _gateway.CreatePreferenceAsync(
-            new PaymentPreferenceRequest(transactionId, amount, $"PVV policy for budget {budgetId}"), ct);
+            new PaymentPreferenceRequest(transactionId, amount, description), ct);
 
         await _repository.AddAsync(
             new PaymentTransaction
@@ -54,8 +64,8 @@ public sealed class PaymentInitHandler : IInternalIngressHandler
                 Status = PaymentStatus.Pending,
                 CreatedAt = DateTime.UtcNow,
                 // Denormalized so the result page can show the ticket after the redirect.
-                VehicleTitle = ReadOptionalString(context.Body, "vehicleTitle"),
-                HolderName = ReadOptionalString(context.Body, "holderName"),
+                VehicleTitle = vehicleTitle,
+                HolderName = holderName,
             },
             ct);
 
