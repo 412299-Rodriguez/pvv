@@ -64,7 +64,7 @@ export function CompanyDetailPage() {
         ) : tab === 'dashboard' ? (
           <LeadDashboard key={id} companyToken={company.hashedCompanyId} />
         ) : (
-          <LeadsExplorer key={id} companyToken={company.hashedCompanyId} />
+          <LeadsExplorer key={id} companyToken={company.hashedCompanyId} companyName={company.name} />
         )
       ) : tab === 'apariencia' ? (
         <AppearanceEditor key={id} companyId={id} />

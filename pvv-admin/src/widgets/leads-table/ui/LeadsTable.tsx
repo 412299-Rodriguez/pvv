@@ -1,12 +1,19 @@
 import { FUNNEL_STEPS, type LeadListItem } from '@/entities/lead'
+import { isRecoverable } from '@/features/lead-recovery'
 import { formatDateTime, orDash } from '@/shared/lib'
 import { FUNNEL_RAMP, formatMoney } from '@/shared/ui/viz'
+
+interface LeadsTableProps {
+  leads: LeadListItem[]
+  /** Offers the recovery action on leads that walked away and left an email. */
+  onRecover?: (lead: LeadListItem) => void
+}
 
 /**
  * Where each lead stopped and who it belongs to. Reading order matches the
  * question an operator actually asks: when, how far, which car, who to call.
  */
-export function LeadsTable({ leads }: { leads: LeadListItem[] }) {
+export function LeadsTable({ leads, onRecover }: LeadsTableProps) {
   if (leads.length === 0) {
     return (
       <p className="py-12 text-center text-sm text-slate-500">
@@ -25,7 +32,8 @@ export function LeadsTable({ leads }: { leads: LeadListItem[] }) {
             <th className="py-2 pr-3 font-semibold">Vehículo</th>
             <th className="py-2 pr-3 font-semibold">Contacto</th>
             <th className="py-2 pr-3 font-semibold">Producto</th>
-            <th className="py-2 font-semibold">Estado</th>
+            <th className="py-2 pr-3 font-semibold">Estado</th>
+            <th className="py-2 font-semibold" />
           </tr>
         </thead>
         <tbody>
@@ -61,12 +69,24 @@ export function LeadsTable({ leads }: { leads: LeadListItem[] }) {
                 ) : null}
               </td>
 
-              <td className="py-3">
+              <td className="py-3 pr-3">
                 <StatusBadge status={lead.status} paymentStatus={lead.paymentStatus} />
                 {lead.policyNumber ? (
                   <div className="mt-1 text-xs text-slate-500 tabular-nums">
                     {lead.policyNumber}
                   </div>
+                ) : null}
+              </td>
+
+              <td className="py-3 text-right">
+                {onRecover && isRecoverable(lead) ? (
+                  <button
+                    type="button"
+                    onClick={() => onRecover(lead)}
+                    className="whitespace-nowrap rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                  >
+                    Recuperar
+                  </button>
                 ) : null}
               </td>
             </tr>

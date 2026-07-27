@@ -4,16 +4,22 @@ import {
   FUNNEL_STEPS,
   listLeads,
   type LeadFilters,
+  type LeadListItem,
   type LeadStatus,
   type PagedLeads,
 } from '@/entities/lead'
+import { useSessionStore } from '@/entities/session'
+import { RecoveryModal, portalUrl } from '@/features/lead-recovery'
 import { Card } from '@/shared/ui'
 import { formatCount } from '@/shared/ui/viz'
 import { presetToFilter, type RangePreset } from '@/shared/lib'
 import { DateRangeFilter } from '@/widgets/date-range-filter'
 import { LeadsTable } from '@/widgets/leads-table'
 
+import { exportLeadsCsv } from '../lib/exportLeads'
+
 const PAGE_SIZE = 20
+const PORTAL_BASE_URL = import.meta.env.VITE_PORTAL_BASE_URL ?? 'http://localhost:5173'
 
 /** The four states a purchase attempt can be in, as the operator thinks of them. */
 const STATUS_TABS: { value: LeadStatus | 'all'; label: string }[] = [
@@ -26,15 +32,23 @@ const STATUS_TABS: { value: LeadStatus | 'all'; label: string }[] = [
 interface LeadsExplorerProps {
   /** SystemAdmin only; an operator is pinned to its own company by its token. */
   companyToken?: string
+  /** Signs the recovery email. Omitted for an operator, which doesn't load it. */
+  companyName?: string
 }
 
-/** The leads table with its filters, tabs and paging. */
-export function LeadsExplorer({ companyToken }: LeadsExplorerProps) {
+/** The leads table with its filters, tabs, paging, export and recovery action. */
+export function LeadsExplorer({ companyToken, companyName }: LeadsExplorerProps) {
   const [preset, setPreset] = useState<RangePreset>('30d')
   const [status, setStatus] = useState<LeadStatus | 'all'>('all')
   const [lastStep, setLastStep] = useState<number | 'all'>('all')
   const [page, setPage] = useState(1)
   const [error, setError] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
+  const [recovering, setRecovering] = useState<LeadListItem | null>(null)
+
+  // The admin explicitly targets a company; an operator carries its own in the token.
+  const sessionToken = useSessionStore((s) => s.companyToken)
+  const effectiveToken = companyToken ?? sessionToken
 
   const filterKey = `${preset}|${status}|${lastStep}|${page}|${companyToken ?? ''}`
   const [loaded, setLoaded] = useState<{ key: string; data: PagedLeads } | null>(null)
@@ -73,6 +87,27 @@ export function LeadsExplorer({ companyToken }: LeadsExplorerProps) {
     setPage(1)
   }
 
+  /** Exports what is on screen — the same filters, every page of them. */
+  const handleExport = async () => {
+    setExporting(true)
+    setError(null)
+    try {
+      const result = await exportLeadsCsv({
+        ...presetToFilter(preset),
+        ...(status === 'all' ? {} : { status }),
+        ...(lastStep === 'all' ? {} : { lastStep }),
+        ...(companyToken ? { companyToken } : {}),
+      })
+      if (result.truncated) {
+        setError(`El archivo trae las primeras ${formatCount(result.rows)} filas; hay más.`)
+      }
+    } catch {
+      setError('No pudimos generar el archivo.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const data = loaded?.data ?? null
   const stale = loaded !== null && loaded.key !== filterKey
 
@@ -104,6 +139,15 @@ export function LeadsExplorer({ companyToken }: LeadsExplorerProps) {
             </option>
           ))}
         </select>
+
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={exporting}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+        >
+          {exporting ? 'Generando…' : 'Exportar'}
+        </button>
       </DateRangeFilter>
 
       <div className="mb-4 flex flex-wrap gap-1">
@@ -131,7 +175,7 @@ export function LeadsExplorer({ companyToken }: LeadsExplorerProps) {
         <p className="py-12 text-center text-sm text-slate-500">Cargando leads…</p>
       ) : (
         <Card className={stale ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-          <LeadsTable leads={data.items} />
+          <LeadsTable leads={data.items} onRecover={setRecovering} />
 
           {total > 0 ? (
             <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
@@ -160,6 +204,15 @@ export function LeadsExplorer({ companyToken }: LeadsExplorerProps) {
           ) : null}
         </Card>
       )}
+
+      {recovering ? (
+        <RecoveryModal
+          lead={recovering}
+          companyName={companyName ?? ''}
+          url={portalUrl(effectiveToken, PORTAL_BASE_URL)}
+          onClose={() => setRecovering(null)}
+        />
+      ) : null}
     </div>
   )
 }
