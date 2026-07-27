@@ -23,20 +23,21 @@ import { exportLeadsCsv } from '../lib/exportLeads'
 const PAGE_SIZE = 20
 
 /**
- * One tab per place a journey can END.
+ * One tab per step of the funnel a journey can stall on.
  *
- * Step 5 has no tab on purpose: reaching it means the policy was issued, so
- * those leads did not get stuck anywhere — they are the sale, and they are
- * counted in the card above instead. Step 0 is the visitor who opened the
- * portal and did nothing else.
+ * The two ends are deliberately absent, because neither is a step. Reaching
+ * step 5 means the policy was issued, so those leads never got stuck — they are
+ * the sale. And a visitor who opened the portal without searching a plate never
+ * entered the funnel at all. Both are counted in the cards above: there is
+ * nothing to act on in either list (no contact details, or nothing left to do).
  */
-const STOP_TABS = [
-  { step: 0, label: 'Solo entró' },
-  ...FUNNEL_STEPS.filter((s) => s.step < 5).map((s) => ({
-    step: s.step,
-    label: `Paso ${s.step} · ${s.label}`,
-  })),
-]
+const STOP_TABS = FUNNEL_STEPS.filter((s) => s.step < 5).map((s) => ({
+  step: s.step,
+  label: `Paso ${s.step} · ${s.label}`,
+}))
+
+/** Visitors who never started: they have no data on them beyond having arrived. */
+const NEVER_STARTED_STEP = 0
 
 /** Inside a tab, the only two outcomes possible: still open, or given up on. */
 const OUTCOME_FILTERS: { value: Extract<LeadStatus, 'abandoned' | 'active'>; label: string }[] = [
@@ -140,8 +141,13 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
 
   return (
     <div>
-      {/* The buyers never stopped anywhere, so they get a number, not a tab. */}
-      <div className="mb-6 grid gap-4 sm:max-w-md sm:grid-cols-2">
+      {/* Neither end of the journey is a step, so both are numbers, not tabs. */}
+      <div className="mb-6 grid gap-4 sm:grid-cols-3 lg:max-w-3xl">
+        <StatTile
+          label="Solo entraron"
+          value={formatCount(breakdown(NEVER_STARTED_STEP)?.total ?? 0)}
+          hint="No llegaron a buscar un vehículo"
+        />
         <StatTile
           label="Terminaron comprando"
           value={formatCount(funnel?.completed ?? 0)}
