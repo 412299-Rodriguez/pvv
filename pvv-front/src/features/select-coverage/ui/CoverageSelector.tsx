@@ -31,7 +31,6 @@ export function CoverageSelector() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'unavailable' | 'error'>('loading');
   const [retry, setRetry] = useState(0);
   const track = useBIStore((s) => s.track);
-  const goTo = useSessionStore((s) => s.goTo);
 
   useEffect(() => {
     let active = true;
@@ -84,15 +83,13 @@ export function CoverageSelector() {
           <Spinner />
         </div>
       ) : status === 'unavailable' ? (
+        // No action offered: the stepper above already lets the buyer go back,
+        // and a button that only retraces a step competes with it.
         <div className={styles.empty}>
           <div className={styles.emptyTitle}>No tenemos una cobertura para este vehículo</div>
           <p className={styles.emptyText}>
-            Todavía no ofrecemos seguro para este tipo de vehículo o para su año. Podés probar
-            con otra patente.
+            Todavía no ofrecemos seguro para este tipo de vehículo o para su año.
           </p>
-          <Button variant="primary" onClick={() => goTo('plate')}>
-            Probar con otra patente
-          </Button>
         </div>
       ) : status === 'error' ? (
         <div className={styles.empty}>
