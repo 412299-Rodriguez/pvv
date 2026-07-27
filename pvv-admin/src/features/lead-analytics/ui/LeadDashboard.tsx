@@ -1,15 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { getLeadFunnel, type LeadFilters, type LeadFunnel } from '@/entities/lead'
-import {
-  Card,
-  CheckBadgeIcon,
-  DoorIcon,
-  RefreshButton,
-  StatTile,
-  TrendingUpIcon,
-  UsersIcon,
-} from '@/shared/ui'
+import { Card, RefreshButton, StatBar } from '@/shared/ui'
 import { formatCount, formatPercent } from '@/shared/ui/viz'
 import { presetToFilter, type RangePreset } from '@/shared/lib'
 import { DateRangeFilter } from '@/widgets/date-range-filter'
@@ -76,30 +68,26 @@ export function LeadDashboard() {
         <p className="py-12 text-center text-sm text-slate-500">Cargando métricas…</p>
       ) : (
         <div className={stale ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-          <div className="mb-6 grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatTile
-              label="Visitas al portal"
-              value={formatCount(funnel.totalLeads)}
-              hint="Intentos de compra iniciados"
-              icon={<UsersIcon className="h-4 w-4" />}
-            />
-            <StatTile
-              label="Pólizas emitidas"
-              value={formatCount(funnel.policiesIssued)}
-              icon={<CheckBadgeIcon className="h-4 w-4" />}
-              tone="success"
-            />
-            <StatTile
-              label="Conversión global"
-              value={formatPercent(funnel.overallConversion)}
-              hint="De visita a póliza"
-              icon={<TrendingUpIcon className="h-4 w-4" />}
-            />
-            <StatTile
-              label="Abandonados"
-              value={formatCount(funnel.abandoned)}
-              hint={`${formatCount(funnel.active)} todavía en curso`}
-              icon={<DoorIcon className="h-4 w-4" />}
+          <div className="mb-6">
+            <StatBar
+              stats={[
+                {
+                  label: 'Visitas al portal',
+                  value: formatCount(funnel.totalLeads),
+                  hint: 'Intentos de compra iniciados',
+                },
+                { label: 'Pólizas emitidas', value: formatCount(funnel.policiesIssued) },
+                {
+                  label: 'Conversión global',
+                  value: formatPercent(funnel.overallConversion),
+                  hint: 'De visita a póliza',
+                },
+                {
+                  label: 'Abandonados',
+                  value: formatCount(funnel.abandoned),
+                  hint: `${formatCount(funnel.active)} todavía en curso`,
+                },
+              ]}
             />
           </div>
 

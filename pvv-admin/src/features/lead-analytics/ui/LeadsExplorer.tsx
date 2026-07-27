@@ -12,16 +12,8 @@ import {
 } from '@/entities/lead'
 import { useSessionStore } from '@/entities/session'
 import { RecoveryModal } from '@/features/lead-recovery'
-import {
-  Card,
-  CheckBadgeIcon,
-  DoorIcon,
-  RefreshButton,
-  StatTile,
-  TrendingUpIcon,
-  UsersIcon,
-} from '@/shared/ui'
-import { FUNNEL_RAMP, formatCount, formatPercent } from '@/shared/ui/viz'
+import { Card, RefreshButton, StatBar } from '@/shared/ui'
+import { formatCount, formatPercent } from '@/shared/ui/viz'
 import { portalUrl, presetToFilter, type RangePreset } from '@/shared/lib'
 import { DateRangeFilter } from '@/widgets/date-range-filter'
 import { LeadsTable } from '@/widgets/leads-table'
@@ -155,30 +147,26 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
         The universe first, then the two ends of the journey. Neither end is a
         step, which is why they are numbers here and not tabs below.
       */}
-      <div className="mb-6 grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile
-          label="Total de leads"
-          value={formatCount(funnel?.totalLeads ?? 0)}
-          icon={<UsersIcon className="h-4 w-4" />}
-        />
-        <StatTile
-          label="Solo entraron"
-          value={formatCount(breakdown(NEVER_STARTED_STEP)?.total ?? 0)}
-          hint="No llegaron a buscar un vehículo"
-          icon={<DoorIcon className="h-4 w-4" />}
-        />
-        <StatTile
-          label="Terminaron comprando"
-          value={formatCount(funnel?.completed ?? 0)}
-          hint="Con la póliza emitida"
-          icon={<CheckBadgeIcon className="h-4 w-4" />}
-          tone="success"
-        />
-        <StatTile
-          label="Conversión"
-          value={formatPercent(funnel?.overallConversion ?? 0)}
-          hint="Del portal a la póliza"
-          icon={<TrendingUpIcon className="h-4 w-4" />}
+      <div className="mb-6">
+        <StatBar
+          stats={[
+            { label: 'Total de leads', value: formatCount(funnel?.totalLeads ?? 0) },
+            {
+              label: 'Solo entraron',
+              value: formatCount(breakdown(NEVER_STARTED_STEP)?.total ?? 0),
+              hint: 'No llegaron a buscar un vehículo',
+            },
+            {
+              label: 'Terminaron comprando',
+              value: formatCount(funnel?.completed ?? 0),
+              hint: 'Con la póliza emitida',
+            },
+            {
+              label: 'Conversión',
+              value: formatPercent(funnel?.overallConversion ?? 0),
+              hint: 'Del portal a la póliza',
+            },
+          ]}
         />
       </div>
 
@@ -195,9 +183,13 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
         tab strip reaches the edges so it reads as part of it.
       */}
       <Card padded={false} className={stale ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-        {/* Where the journey ended. The dot repeats the funnel's ordinal ramp,
-            so a step is the same colour here, in the chart and in the rows. */}
-        <div className="flex flex-wrap gap-1 overflow-x-auto border-b border-slate-200 px-3 pt-2">
+        {/*
+          No overflow container here: the active tab's underline is pulled a
+          pixel below the strip, and an auto-overflow box answers that stray
+          pixel with a scrollbar. Four short tabs wrap on their own if they
+          ever have to.
+        */}
+        <div className="flex flex-wrap gap-1 border-b border-slate-200 px-3 pt-2">
           {STOP_TABS.map((tab) => {
             const active = step === tab.step
             return (
@@ -205,22 +197,15 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
                 key={tab.step}
                 type="button"
                 onClick={() => changeFilter(() => setStep(tab.step))}
-                className={`-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-semibold transition ${
+                className={`-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 px-3 pb-2.5 pt-2 text-sm transition ${
                   active
-                    ? 'border-blue-600 text-blue-700'
-                    : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                    ? 'border-slate-800 font-semibold text-slate-900'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
               >
-                <span
-                  className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: FUNNEL_RAMP[tab.step - 1] ?? FUNNEL_RAMP[0] }}
-                  aria-hidden
-                />
                 {tab.label}
                 <span
-                  className={`rounded-full px-1.5 py-0.5 text-xs font-semibold tabular-nums ${
-                    active ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-500'
-                  }`}
+                  className={`text-xs tabular-nums ${active ? 'text-slate-500' : 'text-slate-400'}`}
                 >
                   {formatCount(breakdown(tab.step)?.total ?? 0)}
                 </span>
