@@ -83,6 +83,10 @@ public sealed class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentComman
         if (request.Outcome == PaymentOutcome.Rejected)
         {
             transaction.Status = PaymentStatus.Failed;
+            // Keep the rejected attempt pointing at the provider's payment: "why was
+            // this refused" is a question someone will ask, and it cannot be answered
+            // without the id.
+            transaction.ProviderPaymentId = request.ProviderPaymentId ?? transaction.ProviderPaymentId;
             await _repository.UpdateAsync(transaction, ct);
             await ProjectAsync(transaction, LeadEventNames.PaymentRejected, ct);
             _logger.LogInformation("Payment {TransactionId} marked failed", transaction.Id);
@@ -90,7 +94,8 @@ public sealed class ConfirmPaymentHandler : IRequestHandler<ConfirmPaymentComman
         }
 
         var confirmedAt = DateTime.UtcNow;
-        if (!await _repository.TryMarkConfirmedAsync(transaction.Id, confirmedAt, ct))
+        if (!await _repository.TryMarkConfirmedAsync(
+                transaction.Id, confirmedAt, request.ProviderPaymentId, ct))
         {
             // Another path confirmed it between our read and this write. With a
             // webhook and two reconciliation paths in play that is a real race,

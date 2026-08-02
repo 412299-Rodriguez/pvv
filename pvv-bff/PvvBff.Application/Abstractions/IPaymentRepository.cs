@@ -49,7 +49,15 @@ public interface IPaymentRepository
     /// arrive as an approval for a transaction that is Failed or Abandoned, and
     /// refusing those would take money without issuing a policy.
     /// </summary>
-    Task<bool> TryMarkConfirmedAsync(string id, DateTime confirmedAt, CancellationToken ct);
+    /// <param name="providerPaymentId">
+    /// The provider's id for the payment that settled this transaction, when the caller
+    /// knows it. Stamped together with the confirmation rather than separately, because
+    /// it is the only link back from a policy we issued to the payment that paid for it —
+    /// what a refund, a chargeback or a support question all start from. Null leaves any
+    /// previously recorded id untouched (the mock gateway reports no id at all).
+    /// </param>
+    Task<bool> TryMarkConfirmedAsync(
+        string id, DateTime confirmedAt, string? providerPaymentId, CancellationToken ct);
 
     /// <summary>
     /// Claims the right to project this transaction's emission outcome onto its

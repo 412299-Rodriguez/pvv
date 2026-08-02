@@ -28,15 +28,24 @@ public sealed class MongoPaymentRepository : IPaymentRepository
     // that one publishes an emission job. Deliberately "not Confirmed" rather than
     // "is Pending" — see the interface for why a Failed or Abandoned transaction
     // must still be allowed to become Confirmed.
-    public async Task<bool> TryMarkConfirmedAsync(string id, DateTime confirmedAt, CancellationToken ct)
+    public async Task<bool> TryMarkConfirmedAsync(
+        string id, DateTime confirmedAt, string? providerPaymentId, CancellationToken ct)
     {
+        var update = Builders<PaymentTransaction>.Update
+            .Set(t => t.Status, PaymentStatus.Confirmed)
+            .Set(t => t.ConfirmedAt, confirmedAt);
+
+        // Only when the caller actually has one: overwriting a recorded id with null
+        // would erase the trail on the second confirmation path to reach the same
+        // transaction.
+        if (!string.IsNullOrWhiteSpace(providerPaymentId))
+            update = update.Set(t => t.ProviderPaymentId, providerPaymentId);
+
         var result = await _collection.UpdateOneAsync(
             Builders<PaymentTransaction>.Filter.And(
                 Builders<PaymentTransaction>.Filter.Eq(t => t.Id, id),
                 Builders<PaymentTransaction>.Filter.Ne(t => t.Status, PaymentStatus.Confirmed)),
-            Builders<PaymentTransaction>.Update
-                .Set(t => t.Status, PaymentStatus.Confirmed)
-                .Set(t => t.ConfirmedAt, confirmedAt),
+            update,
             cancellationToken: ct);
 
         return result.ModifiedCount == 1;
