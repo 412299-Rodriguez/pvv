@@ -16,7 +16,7 @@ export interface EmissionTicket {
 }
 
 interface EmissionResultProps {
-  state: 'emitting' | 'awaiting-payment' | 'success' | 'error';
+  state: 'emitting' | 'awaiting-payment' | 'not-paid' | 'success' | 'error';
   ticket?: EmissionTicket | null;
   /** Already-formatted deadline, shown when state is 'awaiting-payment'. */
   paymentDeadline?: string | null;
@@ -78,6 +78,31 @@ export function EmissionResult({
             vuelvas a comprar.
           </p>
           <div className={styles.buttons}>
+            <Button variant="primary" onClick={onHome}>
+              Volver al inicio
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* The buyer came back from the checkout without a payment: they cancelled,
+          the card was refused, or they simply closed it. Distinct from 'error',
+          which is about OUR side failing — here nothing went wrong, the purchase
+          just did not happen, and saying so plainly is what lets them retry. */}
+      {state === 'not-paid' && (
+        <div className={styles.state}>
+          <h2 className={styles.title}>No se completó el pago</h2>
+          <p className={styles.subtitle}>
+            No llegamos a recibir el pago, así que no emitimos la póliza y no se hizo
+            ningún cargo.
+          </p>
+          <p className={styles.subtitle}>Podés volver a intentarlo cuando quieras.</p>
+          <div className={styles.buttons}>
+            {onRetry && (
+              <Button variant="outline" onClick={onRetry}>
+                Reintentar
+              </Button>
+            )}
             <Button variant="primary" onClick={onHome}>
               Volver al inicio
             </Button>

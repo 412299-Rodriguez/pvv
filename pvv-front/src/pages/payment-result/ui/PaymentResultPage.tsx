@@ -6,11 +6,20 @@ import { EmissionResult, type EmissionTicket } from '@/features/policy-emission'
 import { formatDate } from '@/shared/lib';
 import styles from './PaymentResultPage.module.css';
 
-type ResultState = 'emitting' | 'awaiting-payment' | 'success' | 'error';
+type ResultState = 'emitting' | 'awaiting-payment' | 'not-paid' | 'success' | 'error';
 
 const POLL_MS = 2000;
 /** Keep the "Emitiendo…" screen up at least this long so it's actually visible. */
 const MIN_EMITTING_MS = 2600;
+/**
+ * How long a transaction may stay Pending before we call the purchase off.
+ *
+ * Returning here without having paid is indistinguishable, for the first instants,
+ * from having paid a moment ago: the provider indexes its own payment with a small
+ * delay, so "no payment found" is only meaningful once we have given it time to
+ * appear. Past this window, Pending means the buyer did not pay.
+ */
+const UNPAID_GRACE_MS = 12000;
 
 /**
  * Post-payment result page (/?tx=...). Polls EMISSION_STATUS until the policy is
@@ -93,7 +102,24 @@ export function PaymentResultPage() {
           return;
         }
 
-        // pending / emitting → keep polling
+        // Nothing has settled yet, and there are two very different reasons to be
+        // here. If the payment is Confirmed the policy is genuinely on its way, and
+        // that may legitimately take minutes (the worker retries) — it ends on its
+        // own, so it needs no deadline. A Pending payment with nothing at the
+        // provider is the one that never ends by itself: it is what a buyer who
+        // pressed "volver al sitio" without paying leaves behind.
+        if (status.paymentStatus === 'Pending') {
+          if (Date.now() - startedAt > UNPAID_GRACE_MS) {
+            settle(() => setState('not-paid'));
+            return;
+          }
+          // Ask the provider again instead of only re-reading our own database:
+          // while the payment is unconfirmed, nothing here can change on its own
+          // unless their notification happens to land.
+          await syncPayment(tx).catch(() => undefined);
+          if (!active) return;
+        }
+
         timer = window.setTimeout(poll, POLL_MS);
       } catch {
         if (active) timer = window.setTimeout(poll, POLL_MS + 500);
