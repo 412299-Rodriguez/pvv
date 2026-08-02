@@ -21,7 +21,7 @@ en Argentina, soportando múltiples compañías aseguradoras desde una misma pla
 | Base de datos documental | MongoDB 7 (MongoDB.Driver 3) |
 | Caché | Redis 7 (StackExchange.Redis) |
 | Mensajería | RabbitMQ 3 |
-| Pagos | Mercado Pago SDK .NET + REST API |
+| Pagos | Mercado Pago Checkout Pro — REST API con `HttpClient` tipado, **sin el SDK** |
 | State management (React) | Zustand |
 | CQRS | MediatR 12 |
 | Logging | Serilog 4 |
@@ -171,7 +171,11 @@ Colas: `pvv_emission_queue` (worker principal), `pvv_emission_dlq` (dead letter)
       ABM de compañías y operadores
 - [x] **pvv-admin analytics** — embudo de conversión, tabla de leads con filtros,
       exportación y recupero de abandonos
-- [ ] **HU-11 Mercado Pago real** — reemplazar el mock por preferencia y webhook reales
+- [x] **HU-11 Mercado Pago real** — Checkout Pro por redirección: preferencia real,
+      webhook firmado, confirmación preguntándole al proveedor (nunca creyéndole al
+      navegador) y conciliación periódica. El mock sigue vivo detrás de
+      `Payments:Gateway = Mock | MercadoPago` para poder demostrar la compra sin
+      conexión. Ver §3.6 de `docs/arquitectura-pvv.md`
 - [ ] **HU-12 Recuperación de leads por email** — le da funcionalidad real al botón
       **Recuperar** de la tabla de leads, que hoy solo abre el cliente de correo del
       operador. **Solo por email y solo a los leads que dejaron sus datos**: sin
@@ -243,6 +247,39 @@ queue.OnMessage(channelMessage => HandleAsync(channelMessage.Message, ct));
   tira `PRECONDITION_FAILED`.
 - `IConnection` es caro: reusar uno (singleton, lazy con `SemaphoreSlim`) y abrir un
   `IChannel` por publish (los channels no son thread-safe para publish concurrente).
+
+### Mercado Pago Checkout Pro (HU-11)
+
+- **REST con `HttpClient` tipado, no el SDK oficial.** Hacen falta tres endpoints en
+  total, y el SDK toma las credenciales de un estático global (`MercadoPagoConfig
+  .AccessToken`), que pelea con la inyección de dependencias y cerraría la puerta a un
+  token por inquilino más adelante.
+- **`sandbox_init_point` rompe los pagos con tarjeta.** Con credenciales de un *usuario
+  de prueba*, el checkout correcto es el **`init_point` común** (`UseSandbox: false`).
+  Mandar un cobrador de prueba al host de sandbox da *"una de las partes con la que
+  intentás hacer el pago es de prueba"* **solo con tarjeta**: pagar con dinero en cuenta
+  funciona igual, porque no sale de Mercado Pago, y esa asimetría es lo que despista.
+- **El prefijo del token no dice si es de prueba.** Un usuario de prueba también tiene
+  credenciales `APP_USR-`. Para saber de quién es un token:
+  `GET https://api.mercadopago.com/users/me` — un usuario de prueba trae
+  `tags: ["test_user"]` y un nickname `TESTUSER…`.
+- **Comprador y vendedor tienen que ser dos partes distintas y las dos de prueba.** Hay
+  que crear una cuenta de prueba **Comprador** (panel → la app → *Cuentas de prueba*) y
+  pagar con ella en una ventana de **incógnito**, o se termina comprándose a uno mismo.
+  Un usuario de prueba tampoco puede pagar con una tarjeta real: solo con las de prueba.
+- **En desarrollo hacen falta DOS túneles de cloudflared**: uno al **front** (Mercado
+  Pago no acepta un `back_url` en localhost) y otro al **BFF** (el webhook). Como el
+  portal queda servido por HTTPS, `VITE_BFF_BASE_URL` tiene que apuntar al túnel del
+  BFF y no a `http://localhost`, que sería contenido mixto y el navegador lo bloquea.
+  Los nombres cambian en cada arranque: hay que actualizar juntos el `.env` del front y
+  los secretos `MercadoPago:BackUrlBase`, `MercadoPago:NotificationUrl` y
+  `Cors:AllowedOrigins:2`. **Entrar al portal por la URL del túnel, nunca por
+  localhost** — `localStorage` es por origen y Mercado Pago devuelve al comprador al
+  host del túnel.
+- **Las credenciales van en `dotnet user-secrets`**, nunca en `appsettings.Development
+  .json`, que **sí** está versionado (de ahí el `UserSecretsId` en `PvvBff.API.csproj`).
+- La fecha de `expiration_date_to` necesita ISO 8601 **con milisegundos y offset
+  explícito**; un `Z` de UTC pelado lo rechaza.
 
 ### Otras decisiones del Sprint 1 (válidas para todos los servicios)
 - **EF Core 10** (no 9): empareja con el SDK .NET 10 y `dotnet-ef` 10.0.8.
