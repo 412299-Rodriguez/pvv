@@ -32,6 +32,7 @@ import type {
   CreateBudgetResponse,
   StartPaymentRequest,
   StartPaymentResponse,
+  PaymentSyncResponse,
   EmissionStatusResponse,
   LeadEventPayload,
 } from './contracts';
@@ -93,6 +94,26 @@ export async function createBudget(req: CreateBudgetRequest): Promise<CreateBudg
 export async function startPayment(req: StartPaymentRequest): Promise<StartPaymentResponse> {
   // PAYMENT_INIT creates the pending transaction + checkout preference.
   return ingressRequest<StartPaymentResponse>('PAYMENT_INIT', { ...req });
+}
+
+/**
+ * Asks the BFF to reconcile this transaction with the payment provider.
+ *
+ * Called once when the buyer returns from the checkout, BEFORE polling starts.
+ * Two reasons it has to exist: the provider's notification cannot reach a
+ * developer's machine at all (and even in production may arrive after the buyer
+ * does), and the outcome the browser comes back with in its query string is
+ * editable by hand, so only the server asking the provider can settle a payment.
+ *
+ * Never throws — a failure just means we fall through to polling, which is what
+ * the notification path relies on anyway.
+ */
+export async function syncPayment(transactionId: string): Promise<PaymentSyncResponse | null> {
+  try {
+    return await ingressRequest<PaymentSyncResponse>('PAYMENT_SYNC', { transactionId });
+  } catch {
+    return null;
+  }
 }
 
 export async function getEmissionStatus(transactionId: string): Promise<EmissionStatusResponse> {

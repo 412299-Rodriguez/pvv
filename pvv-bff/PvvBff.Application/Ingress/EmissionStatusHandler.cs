@@ -1,6 +1,7 @@
 using System.Text.Json;
 using PvvBff.Application.Abstractions;
 using PvvBff.Application.Leads;
+using PvvBff.Application.Payments;
 
 namespace PvvBff.Application.Ingress;
 
@@ -35,7 +36,9 @@ public sealed class EmissionStatusHandler : IInternalIngressHandler
             return IngressResponse.Failure(400, "Falta transactionId.");
 
         var tx = await _repository.GetAsync(transactionId, ct);
-        if (tx is null)
+        // One answer for "does not exist" and "belongs to another portal": telling
+        // them apart would turn this into a way to probe for transaction ids.
+        if (tx is null || !PaymentAccess.BelongsTo(tx, context.CompanyId))
             return IngressResponse.Failure(404, "Transacción no encontrada.");
 
         // Funnel step 5. This poll is the BFF's first chance to see the worker's
@@ -60,6 +63,10 @@ public sealed class EmissionStatusHandler : IInternalIngressHandler
         {
             transactionId,
             paymentStatus = tx.Status.ToString(),
+            // Set only when the provider has a payment that has not been completed
+            // yet, which is how the result page tells "we are issuing your policy"
+            // apart from "you are holding a coupon you have not paid".
+            paymentPendingUntil = tx.PaymentPendingUntil,
             emissionStatus = tx.EmissionStatus ?? "pending",
             policyNumber = tx.PolicyNumber,
             amount = tx.Amount,

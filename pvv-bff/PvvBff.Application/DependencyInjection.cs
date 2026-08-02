@@ -25,12 +25,17 @@ public static class DependencyInjection
         services.AddScoped<IInternalIngressHandler, PlateSearchHandler>();
         services.AddScoped<IInternalIngressHandler, QuoteHandler>();
         services.AddScoped<IInternalIngressHandler, BudgetCalcHandler>();
+        services.AddScoped<IInternalIngressHandler, PaymentSyncHandler>();
         services.AddScoped<IInternalIngressHandler, EmissionStatusHandler>();
         services.AddScoped<IInternalIngressHandler, LeadEventHandler>();
 
         // Leads (HU-07) — the single event → funnel mapping, shared by the ingress
         // handler and the server-side producers (payments, emission, abandonment).
         services.AddScoped<ILeadProjectionService, LeadProjectionService>();
+
+        // Payments — asking the provider about transactions still believed unpaid,
+        // driven by the abandonment sweep.
+        services.AddScoped<IPaymentReconciler, PaymentReconciler>();
 
         return services;
     }

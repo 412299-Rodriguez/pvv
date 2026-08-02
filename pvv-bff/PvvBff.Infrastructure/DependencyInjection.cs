@@ -64,9 +64,34 @@ public static class DependencyInjection
         services.AddScoped<ICompanyConfigReader, RedisCompanyConfigReader>();
         services.AddHostedService<IngressRoutesSeederHostedService>();
 
-        // Payments (HU-08) — mock gateway (HU-11 swaps it for real MercadoPago).
+        // Payments — one gateway or the other, chosen by "Payments:Gateway".
+        // The mock is not dead code: it keeps the purchase flow demonstrable with
+        // no Mercado Pago credentials and no internet.
         services.Configure<PaymentOptions>(configuration.GetSection(PaymentOptions.SectionName));
-        services.AddSingleton<IPaymentGateway, MockPaymentGateway>();
+        services.Configure<MercadoPagoOptions>(configuration.GetSection(MercadoPagoOptions.SectionName));
+
+        // Registered whatever the gateway is: the notification endpoint exists either
+        // way, and with no secret configured it fails closed rather than silently
+        // accepting unsigned callbacks.
+        services.AddSingleton<IPaymentWebhookVerifier, MercadoPagoSignatureValidator>();
+
+        var gatewayKind = configuration.GetValue<PaymentGatewayKind>(
+            $"{PaymentOptions.SectionName}:Gateway");
+
+        if (gatewayKind == PaymentGatewayKind.MercadoPago)
+        {
+            var mercadoPagoBaseUrl = configuration[$"{MercadoPagoOptions.SectionName}:BaseUrl"]
+                ?? "https://api.mercadopago.com";
+            services.AddHttpClient<IPaymentGateway, MercadoPagoGateway>(client =>
+            {
+                client.BaseAddress = new Uri(mercadoPagoBaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(20);
+            });
+        }
+        else
+        {
+            services.AddSingleton<IPaymentGateway, MockPaymentGateway>();
+        }
 
         // Messaging (HU-08/8B) — RabbitMQ publisher for emission jobs.
         services.Configure<RabbitMqOptions>(configuration.GetSection(RabbitMqOptions.SectionName));

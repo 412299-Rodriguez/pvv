@@ -1,16 +1,25 @@
 import { useEffect, useState } from 'react';
 
-import { getEmissionStatus } from '@/shared/api/ingress';
+import { getEmissionStatus, syncPayment } from '@/shared/api/ingress';
 import { requestContext } from '@/shared/api';
 import { EmissionResult, type EmissionTicket } from '@/features/policy-emission';
 import { formatDate } from '@/shared/lib';
 import styles from './PaymentResultPage.module.css';
 
-type ResultState = 'emitting' | 'success' | 'error';
+type ResultState = 'emitting' | 'awaiting-payment' | 'not-paid' | 'success' | 'error';
 
 const POLL_MS = 2000;
 /** Keep the "Emitiendo…" screen up at least this long so it's actually visible. */
 const MIN_EMITTING_MS = 2600;
+/**
+ * How long a transaction may stay Pending before we call the purchase off.
+ *
+ * Returning here without having paid is indistinguishable, for the first instants,
+ * from having paid a moment ago: the provider indexes its own payment with a small
+ * delay, so "no payment found" is only meaningful once we have given it time to
+ * appear. Past this window, Pending means the buyer did not pay.
+ */
+const UNPAID_GRACE_MS = 12000;
 
 /**
  * Post-payment result page (/?tx=...). Polls EMISSION_STATUS until the policy is
@@ -21,6 +30,7 @@ export function PaymentResultPage() {
   const tx = new URLSearchParams(window.location.search).get('tx') ?? '';
   const [state, setState] = useState<ResultState>('emitting');
   const [ticket, setTicket] = useState<EmissionTicket | null>(null);
+  const [paymentDeadline, setPaymentDeadline] = useState<string | null>(null);
 
   useEffect(() => {
     if (!tx) {
@@ -47,6 +57,18 @@ export function PaymentResultPage() {
 
         if (status.paymentStatus === 'Failed' || status.paymentStatus === 'Abandoned') {
           settle(() => setState('error'));
+          return;
+        }
+
+        // A payment exists at the provider but has not been completed: a cash coupon
+        // or a transfer, which can take days. Terminal for this page — polling for it
+        // would spin forever, and the buyer has somewhere to be (a payment counter).
+        if (status.paymentStatus === 'Pending' && status.paymentPendingUntil) {
+          const until = status.paymentPendingUntil;
+          settle(() => {
+            setPaymentDeadline(formatDate(new Date(until)));
+            setState('awaiting-payment');
+          });
           return;
         }
 
@@ -80,14 +102,38 @@ export function PaymentResultPage() {
           return;
         }
 
-        // pending / emitting → keep polling
+        // Nothing has settled yet, and there are two very different reasons to be
+        // here. If the payment is Confirmed the policy is genuinely on its way, and
+        // that may legitimately take minutes (the worker retries) — it ends on its
+        // own, so it needs no deadline. A Pending payment with nothing at the
+        // provider is the one that never ends by itself: it is what a buyer who
+        // pressed "volver al sitio" without paying leaves behind.
+        if (status.paymentStatus === 'Pending') {
+          if (Date.now() - startedAt > UNPAID_GRACE_MS) {
+            settle(() => setState('not-paid'));
+            return;
+          }
+          // Ask the provider again instead of only re-reading our own database:
+          // while the payment is unconfirmed, nothing here can change on its own
+          // unless their notification happens to land.
+          await syncPayment(tx).catch(() => undefined);
+          if (!active) return;
+        }
+
         timer = window.setTimeout(poll, POLL_MS);
       } catch {
         if (active) timer = window.setTimeout(poll, POLL_MS + 500);
       }
     };
 
-    void poll();
+    // Reconcile first, then poll. The payment may already be approved on the
+    // provider's side and still unknown here — their notification cannot reach a
+    // developer's machine, and in production it can simply arrive after the buyer
+    // does. Polling before asking would just watch a Pending transaction.
+    void syncPayment(tx).then(() => {
+      if (active) void poll();
+    });
+
     return () => {
       active = false;
       window.clearTimeout(timer);
@@ -101,7 +147,12 @@ export function PaymentResultPage() {
 
   return (
     <main className={styles.stage}>
-      <EmissionResult state={state} ticket={ticket} onHome={goHome} />
+      <EmissionResult
+        state={state}
+        ticket={ticket}
+        paymentDeadline={paymentDeadline}
+        onHome={goHome}
+      />
     </main>
   );
 }

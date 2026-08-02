@@ -25,7 +25,7 @@ pvv-admin (React 19) ──→ pvv-bff (.NET 10) (lectura de leads y analytics)
 | Trust score / anti-fraude | ✅ SignalR en tiempo real | ❌ Fuera de alcance |
 | Consulta registros oficiales (RUNT) | ✅ Bitsion API | ❌ Fuera de alcance |
 | Cross-sell seguros adicionales | ✅ Insurcloud | ❌ Fuera de alcance |
-| Pasarela de pagos | iRecaudo (PSE/tarjeta) | Mercado Pago SDK |
+| Pasarela de pagos | iRecaudo (PSE/tarjeta) | Mercado Pago Checkout Pro (REST, sin SDK) |
 | Workers de emisión | 3 (Multicash, Insurcloud retry, Email) | 1 (RabbitMQ consumer) |
 | Admin panel tabs | 16 tabs | 3 grupos funcionales |
 | Pipeline de seguridad BFF | 8 middlewares | 4 middlewares (sin trust score/HMAC) |
@@ -175,7 +175,7 @@ Cada compañía tiene:
 - **Gateway dinámico (Ingress):** Recibe requests del frontend con un hash opaco (ej: `"PLATE_SEARCH"`) en lugar de una URL real. Busca en Redis a qué endpoint interno corresponde ese hash y hace el proxy. Esto desacopla completamente al frontend de la topología interna — si mañana pvv-soat cambia de puerto o de URL, solo se actualiza Redis, no el frontend.
 - **Sesiones anónimas:** Crea y mantiene una sesión por cookie para cada visitante, sin requerir login. Así puede trackear el recorrido del usuario aunque no se haya identificado.
 - **LeadProjection:** Por cada evento que el wizard dispara (buscó una patente, eligió un producto, abandonó en el pago), actualiza un documento `Lead` en MongoDB. Este documento es la "vista materializada" del embudo de conversión — es lo que después consume `pvv-admin` para el dashboard y la tabla de leads.
-- **Gestión de pagos:** Crea la preferencia de pago en Mercado Pago, registra la transacción, recibe el webhook de confirmación y detecta cuándo un usuario inició el pago pero nunca volvió (abandono de pago).
+- **Gestión de pagos:** Crea la preferencia en Mercado Pago, registra la transacción, recibe el webhook firmado, y además le pregunta al proveedor por su cuenta —al volver el comprador y desde un job periódico— porque una notificación se puede perder. Detecta también quién inició el pago y nunca volvió (abandono), pero recién después de conciliar.
 - **Mensajería:** Una vez confirmado el pago, publica un mensaje en RabbitMQ para que `pvv-emission` emita la póliza de forma asíncrona.
 - **Seguridad:** Pipeline de middlewares que aplica fingerprinting, Cloudflare Turnstile (anti-bot), sesión y rate limiting a cada request.
 
@@ -229,6 +229,7 @@ Las rutas (`ingress-routes.json`) se siembran en Redis al arrancar el BFF via `I
 | `LEAD_EVENT` | POST | BFF interno: registrar evento de wizard |
 | `QUOTE` | POST | BFF interno: arma las coberturas desde PRODUCT_CONFIG + PRICING_CONFIG |
 | `EMISSION_STATUS` | POST | BFF interno: estado del pago y de la emisión (lo consulta la pantalla de resultado) |
+| `PAYMENT_SYNC` | POST | BFF interno: le pregunta al proveedor qué pasó con el pago al volver del checkout |
 
 ### 3.3 LeadProjection — Vista Materializada de Leads
 
@@ -307,13 +308,83 @@ Request → ExceptionHandler → CORS → Auth
 
 ### 3.6 Gestión de Pagos con Mercado Pago
 
+**Checkout Pro por redirección.** El comprador ingresa la tarjeta en el dominio de
+Mercado Pago, no en el nuestro: así ningún dato de tarjeta toca nuestros servidores y
+el frontend no necesita ni la clave pública ni el SDK de JS.
+
+**REST con `HttpClient` tipado, no el SDK oficial.** Se usan tres endpoints en total, y
+el SDK toma las credenciales de un estático global, lo que pelea con la inyección de
+dependencias y bloquearía un token por inquilino a futuro.
+
+**El mock sigue vivo.** `Payments:Gateway` elige entre `Mock` y `MercadoPago` detrás de
+la misma interfaz `IPaymentGateway`. La compra se puede demostrar sin conexión y sin
+credenciales, que para una defensa no es un detalle menor.
+
 **Flujo completo:**
-1. `pvv-front` envía datos del presupuesto seleccionado → BFF crea preferencia de pago en Mercado Pago API
-2. BFF registra la transacción en MongoDB como `pending` con el `mp_preference_id`
-3. Devuelve la `init_point` URL al frontend → usuario paga en Mercado Pago
-4. Mercado Pago llama al webhook `POST /api/payments/webhook` → BFF confirma el pago
-5. BFF actualiza el lead como `payment_confirmed` → publica evento a RabbitMQ para que pvv-emission emita la póliza
-6. **Detección de abandono:** job periódico que busca transacciones `pending` con más de N minutos → las marca como `payment_abandoned` y actualiza el lead
+1. `pvv-front` manda el presupuesto elegido → el BFF crea la preferencia
+   (`POST /checkout/preferences`) con `external_reference` = nuestro id de transacción
+   y `X-Idempotency-Key` = el mismo id, para que un reintento no genere dos checkouts
+2. Registra la transacción en MongoDB como `Pending` y devuelve el `init_point`
+3. El comprador paga en Mercado Pago y vuelve al portal
+4. Al volver, la pantalla de resultado llama **`PAYMENT_SYNC`** antes de empezar a
+   consultar el estado: el BFF le pregunta a Mercado Pago qué pasó realmente
+5. En paralelo, Mercado Pago notifica a `POST /api/payments/mp/webhook`, cuya **firma se
+   verifica** antes de creerle nada
+6. La primera confirmación que gana marca la transacción `Confirmed` y publica el
+   mensaje de emisión a RabbitMQ. Las demás no hacen nada
+7. **Conciliación y abandono:** un job periódico primero le pregunta a Mercado Pago por
+   las transacciones que seguimos viendo impagas, y recién después marca abandonadas
+   las que quedaron
+
+**Tres problemas que el diseño existe para resolver.** Los tres son la diferencia entre
+una integración que anda en la demo y una que no pierde plata:
+
+- **La URL de retorno no es prueba de nada.** Mercado Pago devuelve al comprador con
+  `?collection_status=approved` en la query, y una query la edita cualquiera. Un pago
+  solo se puede confirmar preguntándole al proveedor desde el servidor. Por eso existe
+  `PAYMENT_SYNC` y por eso la pantalla de resultado no le cree al navegador.
+- **"No aprobado" no es lo mismo que "rechazado".** Mercado Pago tiene estados en
+  vuelo: `pending` e `in_process` (un cupón de pago fácil, una transferencia, una
+  revisión antifraude). Tratarlos como fracaso mataría ventas que estaban por concretarse.
+  El resultado es un tri-estado `PaymentOutcome { Approved, Rejected, Pending }` donde
+  **Pending no decide nada**.
+- **Una notificación que llega tarde no es un abandono.** El barrido de abandono miraba
+  transacciones impagas sin preguntarle a nadie, así que un pago cuya notificación se
+  demoró terminaba marcado como abandonado: plata cobrada, póliza no emitida y un lead
+  falsamente perdido. Ahora la conciliación corre **antes** del barrido, y un cupón con
+  vencimiento futuro no se toca por más viejo que sea.
+
+**Dos endpoints de webhook, no uno.** El mock reporta nuestro id de transacción y un
+resultado; Mercado Pago reporta su propio id de pago y firma el pedido. Unificarlos
+obligaría a olfatear la forma del body y pondría al mock detrás de una firma que no
+puede producir. El real vive en `POST /api/payments/mp/webhook` y el del mock queda en
+`POST /api/payments/webhook`. Los dos están **fuera de `/api/ingress`**: son canales
+servidor-a-servidor, sin Turnstile ni sesión.
+
+**Verificación de firma.** Se reconstruye el manifiesto
+`id:{data.id};request-id:{x-request-id};ts:{ts};`, se calcula HMAC-SHA256 con el secreto
+del webhook y se compara en tiempo constante, con una ventana de ±5 minutos contra
+repeticiones. `type` y `data.id` se leen del **query string**, que es sobre lo que
+Mercado Pago firma. Si falta el secreto responde 503 en vez de aceptar sin verificar:
+una configuración mal puesta tiene que ser ruidosa, no cómoda. Los avisos de otros
+temas (`merchant_order`) se responden 200 — un código acá dice si Mercado Pago debe
+reintentar, no si el mensaje nos gustó.
+
+**Los cuatro finales de la pantalla de resultado.** Póliza emitida · pago rechazado o
+fallado · cupón generado y todavía impago (terminal: la pelota la tiene el comprador) ·
+y **volvió sin pagar**. Este último tiene una ventana de gracia de 12 segundos en la que
+se le vuelve a preguntar al proveedor, porque volver sin pagar y haber pagado recién son
+indistinguibles al principio: Mercado Pago indexa su propio pago con demora. El caso
+"pago confirmado, emisión en curso" **no** lleva plazo, porque la emisión puede tardar
+minutos legítimamente mientras el worker reintenta, y termina sola.
+
+**Trazabilidad.** Al confirmar se guarda el `ProviderPaymentId` junto con el estado, en
+la misma escritura. Es el único puente entre una póliza emitida y el pago que la pagó,
+que es donde arranca cualquier devolución, contracargo o consulta de soporte.
+
+> **Probar esto en desarrollo tiene su propia receta** —dos túneles, cuentas de prueba,
+> tarjetas de prueba y una trampa cara con el checkout de sandbox— y está en
+> `docs/datos-de-prueba.md` §11, con el detalle técnico en `docs/CONTEXT.md`.
 
 ### 3.7 Lectura de leads para pvv-admin
 
@@ -691,8 +762,10 @@ pvv-front → ingress(PAYMENT_INIT) → pvv-bff → Mercado Pago API
         ↓ init_point URL
 Usuario paga en Mercado Pago
         ↓
-Mercado Pago → webhook → pvv-bff (POST /api/payments/webhook)
-        ↓ pago confirmado
+Mercado Pago → webhook firmado → pvv-bff (POST /api/payments/mp/webhook)
+   y en paralelo, al volver el comprador:
+pvv-front → ingress(PAYMENT_SYNC) → pvv-bff → GET /v1/payments/search (Mercado Pago)
+        ↓ pago confirmado (gana el primero de los dos; el otro es idempotente)
 pvv-bff → actualiza Lead en MongoDB (step4 = completed)
 pvv-bff → publica en RabbitMQ: { budgetId, companyId, flowId }
         ↓
@@ -828,3 +901,28 @@ Consideraciones a resolver al implementarlo: qué proveedor de envío se usa y d
 viven sus credenciales (no en la configuración multi-tenant, que es del operador),
 qué pasa con los rebotes, y que el consentimiento para contactar está atado a los
 términos que el comprador aceptó en el paso 1 del wizard.
+
+### 11.3 Una sola cuenta de Mercado Pago para toda la plataforma
+
+Todos los inquilinos cobran contra **la misma cuenta de Mercado Pago**: el
+`AccessToken` es uno solo, de la plataforma, y vive en la configuración del BFF. En un
+sistema real eso no se sostiene — cada aseguradora querría cobrar en su propia cuenta,
+y nadie acepta que la plata de sus ventas entre a la cuenta de otro.
+
+La salida idiomática es **Mercado Pago OAuth / marketplace**: cada inquilino autoriza a
+la plataforma una vez, y el sistema guarda un token por compañía con el que crea las
+preferencias de esa compañía. Técnicamente el código ya está preparado para ese cambio:
+por eso se descartó el SDK oficial, cuyo token vive en un estático global y obligaría a
+mutarlo por request.
+
+Lo que no está resuelto es **dónde vive ese token**, y ahí hay un choque real con una
+decisión ya tomada. Los secretos de infraestructura deliberadamente **no** están en la
+configuración por inquilino: esa configuración la edita el operador desde el panel, y
+una credencial de cobro no es algo que deba poder tocarse desde una pantalla de
+apariencia y precios. Pero un token de cobro por compañía es, por definición, un dato
+por compañía. Resolverlo bien pide un almacén de secretos aparte, cifrado y con su
+propio control de acceso, que es una pieza de infraestructura y no una tabla más.
+
+Se documenta en vez de improvisarse porque la respuesta correcta depende de una
+decisión de producto —si la plataforma cobra y liquida, o si cada aseguradora cobra lo
+suyo— y esa decisión cambia el modelo de datos, no solo el código.

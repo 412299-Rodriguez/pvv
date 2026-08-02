@@ -89,7 +89,7 @@ export interface CreateBudgetResponse {
   amount: number;
 }
 
-// ---- Payment init (Mercado Pago mock) --------------------------------------
+// ---- Payment init ----------------------------------------------------------
 export interface StartPaymentRequest {
   budgetId: string;
   amount: number;
@@ -105,9 +105,20 @@ export interface StartPaymentRequest {
 }
 export interface StartPaymentResponse {
   transactionId: string;
-  /** URL the front redirects to (our mock checkout). */
+  /** URL to redirect to — Mercado Pago's checkout, or our mock one. */
   initPoint: string;
   amount: number;
+}
+
+// ---- Payment sync (once, on returning from the checkout) -------------------
+export interface PaymentSyncResponse {
+  transactionId: string;
+  /** Pending | Confirmed | Failed | Abandoned. */
+  paymentStatus: string;
+  /** Whether the provider was actually consulted (false when there was nothing to do). */
+  synced: boolean;
+  /** What the confirmation decided: confirmed | failed | pending | already_confirmed. */
+  outcome: string | null;
 }
 
 // ---- Emission status (polled on the result page) ---------------------------
@@ -115,6 +126,12 @@ export interface EmissionStatusResponse {
   transactionId: string;
   /** Pending | Confirmed | Failed | Abandoned. */
   paymentStatus: string;
+  /**
+   * Deadline (ISO) of a payment the provider has but the buyer has not completed —
+   * a cash coupon or a transfer. Present only in that case, and it is what tells
+   * "issuing your policy" apart from "you still have to go and pay".
+   */
+  paymentPendingUntil: string | null;
   /** pending | emitting | success | failed | retry-exhausted. */
   emissionStatus: string;
   policyNumber: string | null;

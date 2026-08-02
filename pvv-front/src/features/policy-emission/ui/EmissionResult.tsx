@@ -16,8 +16,10 @@ export interface EmissionTicket {
 }
 
 interface EmissionResultProps {
-  state: 'emitting' | 'success' | 'error';
+  state: 'emitting' | 'awaiting-payment' | 'not-paid' | 'success' | 'error';
   ticket?: EmissionTicket | null;
+  /** Already-formatted deadline, shown when state is 'awaiting-payment'. */
+  paymentDeadline?: string | null;
   onHome: () => void;
   onRetry?: () => void;
 }
@@ -26,7 +28,13 @@ interface EmissionResultProps {
  * Presentational emission outcome screen. Driven entirely by props so it can be
  * fed by the result page's EMISSION_STATUS polling (after the payment redirect).
  */
-export function EmissionResult({ state, ticket, onHome, onRetry }: EmissionResultProps) {
+export function EmissionResult({
+  state,
+  ticket,
+  paymentDeadline,
+  onHome,
+  onRetry,
+}: EmissionResultProps) {
   // Stable confetti layout per render.
   const confetti = useMemo(
     () =>
@@ -49,6 +57,55 @@ export function EmissionResult({ state, ticket, onHome, onRetry }: EmissionResul
           <p className={styles.subtitle}>Esto puede tardar unos segundos</p>
           <div className={styles.bar}>
             <i className={styles.barFill} />
+          </div>
+        </div>
+      )}
+
+      {/* Cash coupon or transfer: there IS a payment, it just has not been made yet.
+          Showing the emission spinner here would tell the buyer their policy is on
+          the way when in fact the ball is in their court. */}
+      {state === 'awaiting-payment' && (
+        <div className={styles.state}>
+          <h2 className={styles.title}>Falta que pagues tu cupón</h2>
+          <p className={styles.subtitle}>
+            Generamos el cupón, pero el pago todavía no se acreditó.
+            {paymentDeadline ? ` Tenés hasta el ${paymentDeadline} para pagarlo.` : ''}
+          </p>
+          {/* Deliberately promises no notification: the system does not send email, and
+              telling a buyer we will write to them would be a lie the code cannot keep. */}
+          <p className={styles.subtitle}>
+            Cuando se acredite, emitimos tu póliza automáticamente. No hace falta que
+            vuelvas a comprar.
+          </p>
+          <div className={styles.buttons}>
+            <Button variant="primary" onClick={onHome}>
+              Volver al inicio
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* The buyer came back from the checkout without a payment: they cancelled,
+          the card was refused, or they simply closed it. Distinct from 'error',
+          which is about OUR side failing — here nothing went wrong, the purchase
+          just did not happen, and saying so plainly is what lets them retry. */}
+      {state === 'not-paid' && (
+        <div className={styles.state}>
+          <h2 className={styles.title}>No se completó el pago</h2>
+          <p className={styles.subtitle}>
+            No llegamos a recibir el pago, así que no emitimos la póliza y no se hizo
+            ningún cargo.
+          </p>
+          <p className={styles.subtitle}>Podés volver a intentarlo cuando quieras.</p>
+          <div className={styles.buttons}>
+            {onRetry && (
+              <Button variant="outline" onClick={onRetry}>
+                Reintentar
+              </Button>
+            )}
+            <Button variant="primary" onClick={onHome}>
+              Volver al inicio
+            </Button>
           </div>
         </div>
       )}
