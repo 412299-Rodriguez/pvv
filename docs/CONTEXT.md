@@ -132,7 +132,9 @@ Colas: `pvv_emission_queue` (worker principal), `pvv_emission_dlq` (dead letter)
 
 ## Sprint actual y estado
 
-> **Sprint actual: Sprint 2** (Sprint 0 y Sprint 1 completados).
+> **Sprint actual: Sprint 3** (Sprints 0, 1 y 2 completados). Del Sprint 3 queda un solo
+> entregable: la sección de infraestructura para el superadmin. Después de eso, el PR de
+> `develop` a `main`.
 
 ### Sprint 0 — Setup e infraestructura (semana 1) ✅ COMPLETADO
 **Objetivo:** Entorno 100% listo para escribir código de negocio desde el primer día del Sprint 1.
