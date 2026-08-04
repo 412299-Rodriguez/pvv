@@ -23,7 +23,13 @@ public sealed record LeadListItemDto(
     string? ProductName,
     decimal? Amount,
     string? PaymentStatus,
-    string? PolicyNumber);
+    string? PolicyNumber,
+    /// <summary>
+    /// When the recovery email went out, if it did. The table needs it to stop offering
+    /// an action that would be refused, and to show that somebody already reached out.
+    /// </summary>
+    DateTime? RecoveredAt = null,
+    string? RecoveredBy = null);
 
 public sealed record PagedLeadsDto(
     IReadOnlyList<LeadListItemDto> Items,

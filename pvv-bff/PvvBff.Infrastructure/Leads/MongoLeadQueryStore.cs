@@ -133,7 +133,9 @@ public sealed class MongoLeadQueryStore : ILeadQueryStore
             ProductName: lead.Steps.Step3.ProductName,
             Amount: lead.Steps.Step3.Amount,
             PaymentStatus: lead.Steps.Step4.Status,
-            PolicyNumber: lead.Steps.Step5.PolicyNumber);
+            PolicyNumber: lead.Steps.Step5.PolicyNumber,
+            RecoveredAt: lead.RecoveredAt,
+            RecoveredBy: lead.RecoveredBy);
     }
 
     private static BsonDocument BuildMatch(LeadQueryFilter filter)
