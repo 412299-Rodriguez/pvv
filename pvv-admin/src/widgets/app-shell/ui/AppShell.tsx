@@ -9,6 +9,7 @@ const OPERATOR_TABS = [
   { to: '/leads', label: 'Leads' },
   { to: '/apariencia', label: 'Apariencia' },
   { to: '/productos', label: 'Productos' },
+  { to: '/recupero', label: 'Recupero' },
 ]
 const ADMIN_TABS = [
   { to: '/companias', label: 'Compañías' },
