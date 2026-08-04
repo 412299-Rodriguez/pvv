@@ -5,6 +5,7 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using PvvBff.Application.Abstractions;
+using PvvBff.Infrastructure.Email;
 using PvvBff.Infrastructure.Ingress;
 using PvvBff.Infrastructure.Leads;
 using PvvBff.Infrastructure.Messaging;
@@ -48,6 +49,7 @@ public static class DependencyInjection
             services.AddScoped<ILeadStore, MongoLeadStore>();
             services.AddScoped<ILeadQueryStore, MongoLeadQueryStore>();
             services.AddScoped<IEventLogStore, MongoEventLogStore>();
+            services.AddScoped<ILeadRecoveryStore, MongoLeadRecoveryStore>();
             services.AddHostedService<MongoIndexInitializer>();
         }
 
@@ -92,6 +94,21 @@ public static class DependencyInjection
         {
             services.AddSingleton<IPaymentGateway, MockPaymentGateway>();
         }
+
+        // Email (HU-12) — one sender or the other, chosen by "Email:Provider". Same
+        // reasoning as the payment gateway: the mock keeps lead recovery demonstrable
+        // with no SMTP server and no credentials.
+        services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
+
+        var emailProvider = configuration.GetValue<EmailProviderKind>(
+            $"{EmailOptions.SectionName}:Provider");
+
+        if (emailProvider == EmailProviderKind.Smtp)
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
+        else
+            services.AddScoped<IEmailSender, LoggingEmailSender>();
+
+        services.AddSingleton<IPortalLinkBuilder, PortalLinkBuilder>();
 
         // Messaging (HU-08/8B) — RabbitMQ publisher for emission jobs.
         services.Configure<RabbitMqOptions>(configuration.GetSection(RabbitMqOptions.SectionName));

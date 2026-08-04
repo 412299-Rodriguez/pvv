@@ -22,6 +22,7 @@ en Argentina, soportando múltiples compañías aseguradoras desde una misma pla
 | Caché | Redis 7 (StackExchange.Redis) |
 | Mensajería | RabbitMQ 3 |
 | Pagos | Mercado Pago Checkout Pro — REST API con `HttpClient` tipado, **sin el SDK** |
+| Correo | SMTP con MailKit (Brevo en desarrollo) |
 | State management (React) | Zustand |
 | CQRS | MediatR 12 |
 | Logging | Serilog 4 |
@@ -176,12 +177,13 @@ Colas: `pvv_emission_queue` (worker principal), `pvv_emission_dlq` (dead letter)
       navegador) y conciliación periódica. El mock sigue vivo detrás de
       `Payments:Gateway = Mock | MercadoPago` para poder demostrar la compra sin
       conexión. Ver §3.6 de `docs/arquitectura-pvv.md`
-- [ ] **HU-12 Recuperación de leads por email** — le da funcionalidad real al botón
-      **Recuperar** de la tabla de leads, que hoy solo abre el cliente de correo del
-      operador. **Solo por email y solo a los leads que dejaron sus datos**: sin
-      dirección de correo no hay recupero posible y la acción no se ofrece. Incluye
-      envío desde el backend, plantilla configurable por compañía y registro de a
-      quién ya se contactó. Detalle en `docs/arquitectura-pvv.md` §11.2
+- [x] **HU-12 Recuperación de leads por email** — el botón **Recuperar** envía de verdad.
+      **Solo por email y solo a los leads que dejaron sus datos**: sin dirección no hay
+      recupero y la acción no se ofrece. El mail es HTML, sale con la marca del
+      inquilino y **invita a rehacer la compra**, no reanuda el wizard donde quedó.
+      Plantilla configurable por compañía (`RECOVERY_EMAIL_CONFIG`), envío por SMTP
+      desde el BFF, y registro en el lead de cuándo y quién contactó — se manda una
+      sola vez. Detalle en `docs/arquitectura-pvv.md` §11.2
 - [ ] **Testing** — camino crítico (ingress, reintentos/DLQ de emisión, pagos, proyección de leads)
 - [ ] **Sección de infraestructura para el superadmin** — rutas de ingress y punteros de
       servicios en Redis, separada de la configuración por inquilino

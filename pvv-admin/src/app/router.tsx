@@ -5,6 +5,7 @@ import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { LeadsPage } from '@/pages/leads/LeadsPage'
 import { AppearancePage } from '@/pages/appearance/AppearancePage'
 import { ProductsPage } from '@/pages/products/ProductsPage'
+import { RecoveryEmailPage } from '@/pages/recovery-email/RecoveryEmailPage'
 import { CompaniesPage } from '@/pages/companies/CompaniesPage'
 import { OperatorsPage } from '@/pages/operators/OperatorsPage'
 
@@ -46,6 +47,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleRoute allow="CompanyOperator">
             <ProductsPage />
+          </RoleRoute>
+        ),
+      },
+      {
+        path: 'recupero',
+        element: (
+          <RoleRoute allow="CompanyOperator">
+            <RecoveryEmailPage />
           </RoleRoute>
         ),
       },

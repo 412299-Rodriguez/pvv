@@ -64,6 +64,9 @@ export interface LeadListItem {
   /** Status of the payment step: initiated | completed | rejected | abandoned. */
   paymentStatus: string | null
   policyNumber: string | null
+  /** When the recovery email went out. Non-null means this lead was already contacted. */
+  recoveredAt: string | null
+  recoveredBy: string | null
 }
 
 export interface PagedLeads {

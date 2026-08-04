@@ -881,26 +881,68 @@ técnica.
 
 ### 11.2 HU-12 — Recuperación de leads por email
 
-El botón **Recuperar** de la tabla de leads hoy arma el mensaje y lo abre en el
-cliente de correo del operador (`mailto:`). El alcance planificado, **después de
-HU-11**, es convertirlo en una funcionalidad completa del sistema:
+El botón **Recuperar** de la tabla de leads envía un correo de verdad.
 
-- **Solo por email, y solo a quien dejó sus datos.** Es la regla que define el
-  alcance: un lead sin dirección de correo no es recuperable y no debe ofrecer la
-  acción. No hay SMS, ni llamadas, ni notificaciones — un solo canal, bien hecho.
-- **Envío real desde el backend**, con la plantilla ya poblada con lo que el lead
-  contó: patente, vehículo, producto y precio cotizado, y el link de vuelta al portal
-  de su compañía.
-- **Plantilla configurable por compañía**, en la misma línea que el resto de la
-  personalización por inquilino (asunto y cuerpo, con marcadores para los datos del
-  lead).
-- **Registro de contacto sobre el lead**: cuándo se lo contactó y quién lo hizo, para
-  no escribirle dos veces y para poder medir si el recupero sirve.
+**La regla que define el alcance: solo por email, y solo a quien dejó sus datos.** Un
+lead sin dirección no es recuperable y la acción no se ofrece. No hay SMS ni llamadas —
+un solo canal, bien hecho. Se envía **una sola vez** por lead.
 
-Consideraciones a resolver al implementarlo: qué proveedor de envío se usa y dónde
-viven sus credenciales (no en la configuración multi-tenant, que es del operador),
-qué pasa con los rebotes, y que el consentimiento para contactar está atado a los
-términos que el comprador aceptó en el paso 1 del wizard.
+**El mail invita a rehacer la compra, no reanuda el wizard donde quedó.** Es una
+decisión de alcance, y es la que evitó tener que persistir y restaurar el estado del
+wizard: el link lleva al portal de la compañía y la persona arranca de nuevo. Lo que se
+recupera es la intención, no la sesión.
+
+**Cómo funciona**
+
+```
+POST /api/leads/{flowId}/recover        (JWT del operador)
+  1. Lee el lead ACOTADO por el claim companyToken
+  2. ¿Tiene correo? Si no → no_contact
+  3. RECLAMA el envío (compare-and-set sobre RecoveredAt)
+  4. Lee la plantilla (RECOVERY_EMAIL_CONFIG) y la marca (PVV_UI_CONFIG)
+  5. Renderiza el HTML
+  6. Envía por SMTP
+  7. Si el envío falla → libera el reclamo
+```
+
+**Se reclama antes de enviar.** El `RecoveredAt` se escribe con compare-and-set *antes*
+de mandar, así dos operadores apretando el botón a la vez no producen dos correos. Y si
+el envío falla se libera el reclamo: si no, una caída del proveedor dejaría el lead
+marcado como contactado por un mensaje que nunca existió — lo peor de los dos mundos,
+sin correo y sin segunda oportunidad.
+
+**La plantilla es texto, el HTML es del sistema.** El operador edita cinco campos
+—asunto, saludo, mensaje, texto del botón y cierre— con marcadores `{nombre}`,
+`{patente}`, `{vehiculo}`, `{producto}`, `{precio}` y `{compania}`. Darle markup crudo
+significaría que una etiqueta sin cerrar llega rota a la casilla de un cliente, y que
+quien quiso cambiar una frase termina siendo responsable de que el correo se vea bien en
+Outlook. Un campo vacío usa el texto por defecto del sistema, así que la personalización
+es parcial sin quedar a medias.
+
+**Se renderiza en el servidor.** Antes el cuerpo lo armaba el navegador y se abría en el
+cliente de correo del operador: lo que llegaba al cliente dependía de la máquina desde
+la que se mandaba, y no quedaba registro de nada. Desde que el sistema es el que envía,
+tiene que ser el que decide qué dice.
+
+**El mail lleva la marca del inquilino; el remitente es la plataforma.** Logo, color y
+nombre salen de `PVV_UI_CONFIG` y van dentro del mensaje. El `From` sigue siendo la
+dirección verificada de la plataforma: el correo sale de nuestra infraestructura, y
+firmarlo con el nombre de una aseguradora sería hacerse pasar por ella.
+
+**El reparto de responsabilidades sigue la decisión ya tomada.** La plantilla es
+contenido del inquilino y vive en pvv-config, donde la edita su operador; las
+credenciales SMTP son infraestructura y viven en los user-secrets del BFF, fuera del
+alcance del panel.
+
+**SMTP y no la API de un proveedor.** SMTP es el mismo protocolo en todos lados, así que
+mover el envío entre Brevo, un capturador local o un relay corporativo es cambiar host y
+credenciales, no código. `Email:Provider` elige entre `Smtp` y un `Mock` que solo
+registra en el log — el mismo patrón que el gateway de pagos, y por el mismo motivo:
+poder demostrar el sistema sin credenciales y sin internet.
+
+**Lo que queda fuera.** El manejo de rebotes: el sistema sabe que el proveedor aceptó el
+mensaje, que no es lo mismo que saber que llegó a una bandeja. El consentimiento para
+contactar se apoya en los términos que la persona aceptó en el paso 1 del wizard.
 
 ### 11.3 Una sola cuenta de Mercado Pago para toda la plataforma
 

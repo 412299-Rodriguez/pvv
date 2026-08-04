@@ -36,6 +36,16 @@ public sealed class Lead
     /// <summary>Message of the last wizard error, if any.</summary>
     public string? LastError { get; set; }
 
+    // ---- Recovery (HU-12) ------------------------------------------------------
+    /// <summary>
+    /// When the recovery email went out. Its absence is what makes a lead eligible:
+    /// somebody who walked away from a purchase is owed one reminder, not a campaign.
+    /// </summary>
+    public DateTime? RecoveredAt { get; set; }
+
+    /// <summary>Operator who sent it, so the action has a name attached to it.</summary>
+    public string? RecoveredBy { get; set; }
+
     public LeadSteps Steps { get; set; } = new();
 }
 

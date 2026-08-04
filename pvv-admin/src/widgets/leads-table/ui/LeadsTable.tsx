@@ -87,7 +87,19 @@ export function LeadsTable({ leads, onRecover }: LeadsTableProps) {
               </td>
 
               <td className="py-3.5 pr-5 text-right">
-                {onRecover && isRecoverable(lead) ? (
+                {/* Already written to: say so instead of leaving the cell blank. A
+                    lead that was contacted and one that could never be contacted are
+                    not the same thing, and an empty cell reads as the second. */}
+                {lead.recoveredAt ? (
+                  <span
+                    title={`Contactado el ${formatDateTime(lead.recoveredAt)}${
+                      lead.recoveredBy ? ` por ${lead.recoveredBy}` : ''
+                    }`}
+                    className="whitespace-nowrap text-xs font-medium text-stone-400"
+                  >
+                    Contactado
+                  </span>
+                ) : onRecover && isRecoverable(lead) ? (
                   <button
                     type="button"
                     onClick={() => onRecover(lead)}

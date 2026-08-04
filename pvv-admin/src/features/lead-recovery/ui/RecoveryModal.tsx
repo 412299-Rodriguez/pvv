@@ -1,42 +1,54 @@
 import { useState } from 'react'
 
 import type { LeadListItem } from '@/entities/lead'
-import { Button, inputClass } from '@/shared/ui'
+import { Button } from '@/shared/ui'
 
-import { buildRecoveryDraft } from '../lib/recoveryTemplate'
+import { sendRecoveryEmail, type RecoveryOutcome } from '../api/recoveryApi'
 
 interface RecoveryModalProps {
   lead: LeadListItem
-  companyName: string
-  /** Portal link to drop into the email, when the tenant is known. */
-  url: string | null
   onClose: () => void
+  /** Called after a successful send so the table can pick up the new state. */
+  onSent: () => void
+}
+
+/** What each outcome means to the person who pressed the button. */
+const OUTCOME_MESSAGE: Record<Exclude<RecoveryOutcome, 'sent'>, string> = {
+  not_found: 'No encontramos este lead. Puede que se haya borrado.',
+  no_contact: 'Este lead no dejó una dirección de correo, así que no se le puede escribir.',
+  already_recovered: 'A este lead ya se le envió el correo de recupero.',
+  send_failed: 'No pudimos enviar el correo. Probá de nuevo en un rato.',
 }
 
 /**
- * Composes the "come back and finish" email for an abandoned lead.
+ * Confirms sending the recovery email for an abandoned lead.
  *
- * Sending happens in the operator's own mail client via a mailto: link — the
- * reply lands in their inbox and the message goes out from their real address,
- * which no SMTP setup here would improve on.
+ * It confirms rather than composes. The wording lives in the company's Recupero
+ * settings and the message is assembled and sent by the backend, which is what makes it
+ * consistent, branded and recorded. The previous version opened the operator's own mail
+ * client with an editable draft: whatever reached the customer depended on the machine
+ * it was sent from, and nothing was ever written down.
  */
-export function RecoveryModal({ lead, companyName, url, onClose }: RecoveryModalProps) {
-  const draft = buildRecoveryDraft(lead, companyName, url)
-  const [subject, setSubject] = useState(draft.subject)
-  const [body, setBody] = useState(draft.body)
-  const [copied, setCopied] = useState(false)
+export function RecoveryModal({ lead, onClose, onSent }: RecoveryModalProps) {
+  const [sending, setSending] = useState(false)
+  const [outcome, setOutcome] = useState<RecoveryOutcome | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  const openMailClient = () => {
-    const to = encodeURIComponent(lead.email ?? '')
-    window.location.href = `mailto:${to}?subject=${encodeURIComponent(
-      subject,
-    )}&body=${encodeURIComponent(body)}`
+  const send = async () => {
+    setSending(true)
+    setError(null)
+    const result = await sendRecoveryEmail(lead.flowId)
+    setSending(false)
+    setOutcome(result.outcome)
+
+    if (result.outcome === 'sent') {
+      onSent()
+      return
+    }
+    setError(result.error ?? OUTCOME_MESSAGE[result.outcome])
   }
 
-  const copyBody = async () => {
-    await navigator.clipboard.writeText(body)
-    setCopied(true)
-  }
+  const sent = outcome === 'sent'
 
   return (
     <div
@@ -47,56 +59,55 @@ export function RecoveryModal({ lead, companyName, url, onClose }: RecoveryModal
       onClick={onClose}
     >
       <div
-        className="max-h-full w-full max-w-xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
+        className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 className="text-lg font-bold text-stone-800">Recuperar este lead</h2>
-        <p className="mt-1 text-sm text-stone-500">
-          Para <span className="font-medium text-stone-700">{lead.email}</span>
-          {lead.holderName ? ` · ${lead.holderName}` : ''}
-        </p>
+        {sent ? (
+          <>
+            <h2 className="text-lg font-bold text-stone-800">Correo enviado</h2>
+            <p className="mt-2 text-sm text-stone-600">
+              Le escribimos a <span className="font-medium text-stone-800">{lead.email}</span>{' '}
+              invitándolo a retomar su compra. Queda registrado, así que no se le va a
+              volver a escribir.
+            </p>
+            <div className="mt-5 flex justify-end">
+              <Button onClick={onClose}>Listo</Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 className="text-lg font-bold text-stone-800">Recuperar este lead</h2>
+            <p className="mt-2 text-sm text-stone-600">
+              Se le va a enviar un correo a{' '}
+              <span className="font-medium text-stone-800">{lead.email}</span>
+              {lead.holderName ? ` (${lead.holderName})` : ''} invitándolo a retomar la compra
+              {lead.plate ? ` de ${lead.plate}` : ''}.
+            </p>
+            <p className="mt-3 text-xs text-stone-500">
+              El texto sale de lo que configuraste en <span className="font-medium">Recupero</span>,
+              con el logo y los colores de tu compañía. Se envía una sola vez por lead.
+            </p>
 
-        <label className="mt-4 block text-sm font-medium text-stone-600">
-          Asunto
-          <input
-            className={`${inputClass} mt-1`}
-            value={subject}
-            onChange={(event) => setSubject(event.target.value)}
-          />
-        </label>
+            {error ? (
+              <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error}
+              </p>
+            ) : null}
 
-        <label className="mt-4 block text-sm font-medium text-stone-600">
-          Mensaje
-          <textarea
-            className={`${inputClass} mt-1 h-64 font-mono text-xs`}
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
-          />
-        </label>
-
-        {url === null ? (
-          <p className="mt-2 text-xs text-amber-700">
-            No pudimos armar el link al portal, así que el mensaje no lo incluye.
-          </p>
-        ) : null}
-
-        <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={copyBody}
-            className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
-          >
-            {copied ? 'Copiado' : 'Copiar texto'}
-          </button>
-          <Button onClick={openMailClient}>Abrir en mi correo</Button>
-        </div>
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-700 transition hover:bg-stone-50"
+              >
+                Cancelar
+              </button>
+              <Button onClick={send} disabled={sending}>
+                {sending ? 'Enviando…' : 'Enviar correo'}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

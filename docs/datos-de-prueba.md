@@ -417,3 +417,83 @@ docker exec pvv-mongodb mongosh -u pvv_user -p pvv_pass --authenticationDatabase
 `Status`: 0 Pending · 1 Confirmed · 2 Failed · 3 Abandoned. Una compra exitosa tiene
 `Status: 1`, un `ProviderPaymentId` con el id real del pago en Mercado Pago,
 `EmissionStatus: "success"` y su número de póliza.
+
+---
+
+## 12. Probar el recupero de leads por email
+
+### 12.1 Configuración
+
+Las credenciales SMTP van en **user-secrets**, nunca en el appsettings versionado:
+
+```bash
+cd pvv-bff/PvvBff.API
+dotnet user-secrets set "Email:Username"    "<login SMTP>"
+dotnet user-secrets set "Email:Password"    "<clave SMTP>"
+dotnet user-secrets set "Email:FromAddress" "<remitente verificado>"
+```
+
+El host, el puerto y el proveedor están en `appsettings.Development.json`
+(`Email:Provider = Smtp`, `smtp-relay.brevo.com`, puerto 587, STARTTLS). Con
+`Email:Provider = Mock` no se manda nada: el mensaje se registra en el log y alcanza
+para recorrer el flujo sin credenciales.
+
+⚠️ **`Email:PortalBaseUrl`** tiene que ser una URL alcanzable desde afuera — es el link
+del botón del correo. Con el valor por defecto (`localhost:5173`) quien reciba el mail
+aterriza en su propia computadora. Para una prueba real, apuntalo al túnel del front:
+
+```bash
+dotnet user-secrets set "Email:PortalBaseUrl" "https://<tunel>.trycloudflare.com"
+```
+
+**El remitente tiene que estar verificado con el proveedor.** En Brevo se verifica una
+dirección suelta (no hace falta un dominio) en https://app.brevo.com/senders/list.
+
+> Mandar *desde* una dirección `@gmail.com` a través de Brevo suele caer en **spam**,
+> porque el SPF/DKIM del proveedor no alinea con `gmail.com`. Para la demo alcanza con
+> mirar la carpeta de spam; la solución real es un dominio propio, fuera de alcance.
+
+⚠️ **Si el envío falla con `525 5.7.1 Unauthorized IP address`**, no es el código: Brevo
+bloquea las IPs desconocidas para las claves SMTP, y viene **activado por defecto** en
+las cuentas creadas después de mayo de 2024. Se arregla en
+https://app.brevo.com/security/authorised_ips, agregando la IP pública o —mejor en una
+conexión hogareña, donde la IP cambia— desactivando la restricción. No hace falta
+reiniciar nada: el cliente SMTP se conecta de cero en cada envío.
+
+Este error aparece **al final**, después de que todo lo demás funcionó, así que es fácil
+leerlo como si el problema fuera otro. El log del BFF lo dice con todas las letras.
+
+### 12.2 Preparar un lead recuperable
+
+Hace falta un lead **abandonado y con correo**, o sea que llegó al paso 2. Empezá una
+compra en el portal, cargá patente y DNI (los datos de contacto se guardan ahí), y
+abandonala. En desarrollo un lead se marca abandonado al minuto de silencio (§7).
+
+### 12.3 Enviar
+
+En el panel: **Leads** → tab del paso donde quedó → **Abandonaron** → botón
+**Recuperar** → *Enviar correo*.
+
+| Qué esperar | Cuándo |
+|---|---|
+| Se envía y la fila pasa a decir **Contactado** | Camino feliz |
+| El botón no aparece | El lead no dejó correo, o ya fue contactado |
+| "A este lead ya se le envió el correo" | Se forzó un segundo envío |
+| "No pudimos enviar el correo" | El proveedor rechazó — mirar el log del BFF |
+
+El texto sale de **Recupero** en el panel del operador. Con los campos vacíos se usan
+los textos por defecto del sistema, que son los que se ven en gris.
+
+### 12.4 Verificar contra la base
+
+```bash
+docker exec pvv-mongodb mongosh -u pvv_user -p pvv_pass --authenticationDatabase admin --quiet \
+  --eval 'db.getSiblingDB("pvv_bff_db").leads.find({RecoveredAt:{$ne:null}},{ContactEmail:1,RecoveredAt:1,RecoveredBy:1}).toArray()'
+```
+
+Para poder reenviarle a un lead que ya fue contactado (útil al probar), borrale la marca:
+
+```bash
+docker exec pvv-mongodb mongosh -u pvv_user -p pvv_pass --authenticationDatabase admin --quiet \
+  --eval 'db.getSiblingDB("pvv_bff_db").leads.updateMany({},{$set:{RecoveredAt:null,RecoveredBy:null}})'
+```

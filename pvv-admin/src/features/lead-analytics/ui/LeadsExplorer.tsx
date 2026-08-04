@@ -10,11 +10,10 @@ import {
   type LeadStatus,
   type PagedLeads,
 } from '@/entities/lead'
-import { useSessionStore } from '@/entities/session'
 import { RecoveryModal } from '@/features/lead-recovery'
 import { Card, RefreshButton, StatBar } from '@/shared/ui'
 import { formatCount, formatPercent } from '@/shared/ui/viz'
-import { portalUrl, presetToFilter, type RangePreset } from '@/shared/lib'
+import { presetToFilter, type RangePreset } from '@/shared/lib'
 import { DateRangeFilter } from '@/widgets/date-range-filter'
 import { LeadsTable } from '@/widgets/leads-table'
 
@@ -45,13 +44,8 @@ const OUTCOME_FILTERS: { value: Extract<LeadStatus, 'abandoned' | 'active'>; lab
   { value: 'active', label: 'En curso' },
 ]
 
-interface LeadsExplorerProps {
-  /** Signs the recovery email; the shell loads it once per session. */
-  companyName?: string
-}
-
 /** The leads table, grouped by where each purchase attempt stopped. */
-export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
+export function LeadsExplorer() {
   const [preset, setPreset] = useState<RangePreset>('30d')
   // Opens on the first real milestone; the counts on each tab say where to look.
   const [step, setStep] = useState(1)
@@ -62,9 +56,6 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
   const [recovering, setRecovering] = useState<LeadListItem | null>(null)
   // Bumped by the refresh button; reloads both the table and the counters.
   const [reload, setReload] = useState(0)
-
-  // Used only to build the portal link inside a recovery email.
-  const sessionToken = useSessionStore((s) => s.companyToken)
 
   const filterKey = `${preset}|${step}|${outcome}|${page}|${reload}`
   const [loaded, setLoaded] = useState<{ key: string; data: PagedLeads } | null>(null)
@@ -294,9 +285,10 @@ export function LeadsExplorer({ companyName }: LeadsExplorerProps) {
       {recovering ? (
         <RecoveryModal
           lead={recovering}
-          companyName={companyName ?? ''}
-          url={portalUrl(sessionToken)}
           onClose={() => setRecovering(null)}
+          // A sent email changes the row (it stops being recoverable), so reload
+          // rather than patch it locally: the server is the one that knows.
+          onSent={() => setReload((n) => n + 1)}
         />
       ) : null}
     </div>
