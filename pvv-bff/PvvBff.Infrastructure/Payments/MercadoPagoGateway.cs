@@ -167,13 +167,16 @@ public sealed class MercadoPagoGateway : IPaymentGateway
     /// Which checkout to send the buyer to.
     ///
     /// These are two different environments on two different hosts, not two
-    /// spellings of one URL: init_point is production (www.mercadopago.com.ar) and
-    /// sandbox_init_point is the test one (sandbox.mercadopago.com.ar). Landing a
-    /// buyer on production while the collector is a test account is the mismatch
-    /// Mercado Pago refuses with "una de las partes con la que intentás hacer el
-    /// pago es de prueba" — and it refuses it regardless of who the buyer is, which
-    /// makes it very easy to misread as a problem with the payer and go hunting on
-    /// the wrong side.
+    /// spellings of one URL: init_point is www.mercadopago.com.ar and
+    /// sandbox_init_point is sandbox.mercadopago.com.ar.
+    ///
+    /// With a TEST-USER access token the right answer is the plain init_point, so
+    /// <see cref="MercadoPagoOptions.UseSandbox"/> stays false. Sending that buyer to
+    /// the sandbox host instead is what Mercado Pago refuses with "una de las partes
+    /// con la que intentás hacer el pago es de prueba" — but only on CARD payments,
+    /// because account money never leaves Mercado Pago while a card goes out to the
+    /// real card rails. That asymmetry is the whole clue, and it is easy to misread as
+    /// a problem with the payer and go hunting on the wrong side.
     /// </summary>
     private string SelectInitPoint(PreferenceResponse dto)
     {

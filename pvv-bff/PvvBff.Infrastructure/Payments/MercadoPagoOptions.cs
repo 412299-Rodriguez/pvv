@@ -46,12 +46,19 @@ public sealed class MercadoPagoOptions
     public bool AutoReturn { get; set; } = true;
 
     /// <summary>
-    /// Send the buyer to the sandbox checkout instead of the production one.
+    /// Send the buyer to the sandbox checkout instead of the ordinary one.
     ///
-    /// Must be true whenever the access token belongs to a test account. Mercado
-    /// Pago returns two different hosts for a preference — sandbox.mercadopago.com.ar
-    /// and www.mercadopago.com.ar — and it refuses a payment whose collector and
-    /// checkout are in different environments.
+    /// Leave this FALSE, including with test credentials — which is the opposite of
+    /// what the name suggests. A test user is already a complete test environment:
+    /// its preferences are payable on the ordinary <c>init_point</c>, and only with
+    /// the test cards. Turning this on is what produced "una de las partes con la que
+    /// intentás hacer el pago es de prueba", and only when paying BY CARD — account
+    /// money is internal to Mercado Pago and settled fine, which is the asymmetry that
+    /// gives the cause away.
+    ///
+    /// Kept as a switch rather than deleted because the two hosts are genuinely two
+    /// environments (sandbox.mercadopago.com.ar vs www.mercadopago.com.ar), and a
+    /// future integration may need the other one.
     /// </summary>
     public bool UseSandbox { get; set; }
 
