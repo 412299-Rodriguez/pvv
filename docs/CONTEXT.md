@@ -26,8 +26,8 @@ en Argentina, soportando múltiples compañías aseguradoras desde una misma pla
 | State management (React) | Zustand |
 | CQRS | MediatR 12 |
 | Logging | Serilog 4 |
-| Testing .NET | xUnit + Moq |
-| Testing React | Vitest |
+| Testing .NET | xUnit + Moq (unitario, sin infraestructura) |
+| Testing React | — (no cubierto, ver §Testing) |
 
 ---
 
@@ -184,12 +184,51 @@ Colas: `pvv_emission_queue` (worker principal), `pvv_emission_dlq` (dead letter)
       Plantilla configurable por compañía (`RECOVERY_EMAIL_CONFIG`), envío por SMTP
       desde el BFF, y registro en el lead de cuándo y quién contactó — se manda una
       sola vez. Detalle en `docs/arquitectura-pvv.md` §11.2
-- [ ] **Testing** — camino crítico (ingress, reintentos/DLQ de emisión, pagos, proyección de leads)
+- [x] **Testing unitario del camino crítico** — 139 pruebas xUnit repartidas en cuatro
+      proyectos (`PvvBff.Tests`, `PvvSoat.Tests`, `PvvEmission.Tests`, `PvvConfig.Tests`),
+      una por solución. Cubren emisión de pólizas, clasificación de fallas de emisión,
+      firma del webhook de Mercado Pago, idempotencia del cobro, proyección del embudo,
+      recupero de leads y cifrado/JWT. **No necesitan Docker**: cada dependencia externa
+      está mockeada, así que la suite entera corre en menos de un segundo.
+      Alcance y lo que queda afuera en la sección *Testing* de este documento
 - [ ] **Sección de infraestructura para el superadmin** — rutas de ingress y punteros de
       servicios en Redis, separada de la configuración por inquilino
 
 > Para levantar todo y recorrer los casos de prueba: **`docs/datos-de-prueba.md`**
 > (credenciales, portales de cada compañía, patentes y qué valida cada una, casos borde).
+
+---
+
+## Testing
+
+Cuatro proyectos xUnit, uno por solución, agregados a su `.sln`:
+
+| Proyecto | Qué cubre |
+|---|---|
+| `pvv-soat/PvvSoat.Tests` | Emisión: presupuesto inexistente, vencido o ya convertido; idempotencia ante mensajes repetidos; numeración `PVV-{año}-{000000}`; renovación futuro-fechada |
+| `pvv-emission/PvvEmission.Tests` | Clasificación de la respuesta de soat en reintento / DLQ / éxito; soat caído o con timeout; el binder de configuración que **agrega** en vez de reemplazar |
+| `pvv-bff/PvvBff.Tests` | Firma HMAC del webhook de Mercado Pago (falsificación, replay, ventana temporal); idempotencia del cobro y el tri-estado aprobado/rechazado/pendiente; proyección del embudo de leads; recupero por email (reclamo previo al envío, escapado de HTML, sanitización de color) |
+| `pvv-config/PvvConfig.Tests` | Cifrado determinístico del token del portal; claims del JWT, incluido `companyToken` |
+
+```bash
+dotnet test pvv-bff/PvvBff.sln       # y lo mismo para las otras tres
+```
+
+**Son pruebas unitarias: no levantan nada.** Cada dependencia externa —repositorios,
+Mongo, Redis, RabbitMQ, SMTP, la API de Mercado Pago, pvv-soat— está mockeada con Moq o
+con un `HttpMessageHandler` de prueba, así que la suite corre sin Docker y sin red.
+
+**Lo que deliberadamente NO cubren**, para no dar una falsa sensación de red:
+
+- **Lo que sólo se puede verificar contra la base.** El `$max` que impide que un lead
+  retroceda de paso, el compare-and-set que evita el doble `policy_issued`, la
+  numeración de pólizas bajo transacción serializable con `UPDLOCK/HOLDLOCK`: acá se
+  verifica que la capa de aplicación *pida* lo correcto, no que Mongo o SQL lo cumplan.
+  Eso requiere tests de integración con contenedores efímeros.
+- **El cableado HTTP**: controllers, middlewares del ingress (fingerprint, Turnstile,
+  sesión, rate limiting), CORS y autorización por rol.
+- **Los dos frontends.** No hay Vitest configurado; el wizard y el panel se siguen
+  verificando a mano con `docs/datos-de-prueba.md`.
 
 ---
 

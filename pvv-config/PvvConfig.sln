@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PvvConfig.Infrastructure", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PvvConfig.Worker", "PvvConfig.Worker\PvvConfig.Worker.csproj", "{C4280E99-9964-4574-B1BC-F1D575B37DB9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PvvConfig.Tests", "PvvConfig.Tests\PvvConfig.Tests.csproj", "{10E42BD2-076E-48AC-8987-3573B2B02252}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -83,6 +85,18 @@ Global
 		{C4280E99-9964-4574-B1BC-F1D575B37DB9}.Release|x64.Build.0 = Release|Any CPU
 		{C4280E99-9964-4574-B1BC-F1D575B37DB9}.Release|x86.ActiveCfg = Release|Any CPU
 		{C4280E99-9964-4574-B1BC-F1D575B37DB9}.Release|x86.Build.0 = Release|Any CPU
+		{10E42BD2-076E-48AC-8987-3573B2B02252}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10E42BD2-076E-48AC-8987-3573B2B02252}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10E42BD2-076E-48AC-8987-3573B2B02252}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{10E42BD2-076E-48AC-8987-3573B2B02252}.Debug|x64.Build.0 = Debug|Any CPU
+		{10E42BD2-076E-48AC-8987-3573B2B02252}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{10E42BD2-076E-48AC-8987-3573B2B02252}.Debug|x86.Build.0 = Debug|Any CPU
+		{10E42BD2-076E-48AC-8987-3573B2B02252}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10E42BD2-076E-48AC-8987-3573B2B02252}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10E42BD2-076E-48AC-8987-3573B2B02252}.Release|x64.ActiveCfg = Release|Any CPU
+		{10E42BD2-076E-48AC-8987-3573B2B02252}.Release|x64.Build.0 = Release|Any CPU
+		{10E42BD2-076E-48AC-8987-3573B2B02252}.Release|x86.ActiveCfg = Release|Any CPU
+		{10E42BD2-076E-48AC-8987-3573B2B02252}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
